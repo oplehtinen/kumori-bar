@@ -10,10 +10,23 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_komorebi_status,
             switch_to_workspace,
-            komorebi_init_event_listener
+            komorebi_init_event_listener,
+            set_komorebi_offset
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[tauri::command]
+fn set_komorebi_offset(offset: &str) {
+    Command::new("komorebic")
+        .arg("global-work-area-offset")
+        .arg("0")
+        .arg(offset)
+        .arg("0")
+        .arg(offset)
+        .output()
+        .expect("failed to execute process");
 }
 
 #[tauri::command]

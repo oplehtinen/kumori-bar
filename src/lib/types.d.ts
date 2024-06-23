@@ -5,7 +5,7 @@ export interface KomorebiStatus {
     is_paused: boolean;
     monitors: {
         elements: KomorebiMonitor[];
-        focused: KomorebiMonitor[keyof KomorebiMonitor];
+        focused: KomorebiMonitor[keyof KomorebiMonitor[]];
     };
     mouse_follows_focus: boolean;
     new_window_behaviour: 'Create' | 'Insert' | 'Swap';

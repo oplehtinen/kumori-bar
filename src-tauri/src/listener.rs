@@ -1,10 +1,13 @@
+// code modified from https://github.com/da-rth/yasb/blob/tauri-port/src-tauri/src/widgets/komorebi/listener.rs
+// license: MIT
+
 pub const KOMOREBI_NAMED_PIPE: &str = r"\\.\pipe\bar-komorebi";
 pub const APP_NAME: &str = "bar";
 const KOMOREBI_CLI_EXE: &str = "komorebic";
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 use ::windows::core::PCSTR;
 use ::windows::Win32;
-
+use serde_json::Value;
 use std::os::windows::process::CommandExt;
 use std::process::ExitStatus;
 use std::process::{Command, Stdio};
@@ -86,7 +89,7 @@ fn read_named_pipe(named_pipe: HANDLE, data_buffer: &mut [u8; PIPE_BUFFER_USIZE]
         .as_bool()
     }
 }
-
+type KomorebiNotification = Value;
 fn poll_named_pipe(named_pipe: HANDLE, app_handle: &AppHandle) -> () {
     let mut data_buffer = [0; PIPE_BUFFER_USIZE];
 
@@ -105,9 +108,15 @@ fn poll_named_pipe(named_pipe: HANDLE, app_handle: &AppHandle) -> () {
                         continue;
                     };
 
-                    let komorebi_event = format!("Komorebi{}", event_type);
-                    let payload = payload_value["event"]["payload"].clone();
-                    log::info!("KomorebiEventListener: emitting event: {}", komorebi_event);
+                    let payload: KomorebiNotification =
+                        match serde_json::from_value(payload_value.clone()) {
+                            Ok(v) => v,
+                            Err(e) => {
+                                log::error!("Event[{}]: {}", event_type, e.to_string());
+                                continue;
+                            }
+                        };
+
                     let _ = app_handle.emit_all("komorebi_status", payload);
                 }
             }

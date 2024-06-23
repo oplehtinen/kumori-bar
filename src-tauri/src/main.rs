@@ -2,7 +2,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::process::Command;
-use tauri::command;
 mod listener;
 use crate::listener::komorebi_init_event_listener;
 
@@ -28,10 +27,24 @@ fn get_komorebi_status() -> String {
 }
 
 #[tauri::command]
-fn switch_to_workspace(workspace: &str) {
+fn switch_to_workspace(workspace: &str, monitor: &str) {
     Command::new("komorebic")
-        .arg("focus-named-workspace")
+        .arg("mouse-follows-focus")
+        .arg("disable")
+        .output()
+        .expect("failed to execute process");
+    // wait for the command to finish
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    Command::new("komorebic")
+        .arg("focus-monitor-workspace")
+        .arg(monitor)
         .arg(workspace)
+        .output()
+        .expect("failed to execute process");
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    Command::new("komorebic")
+        .arg("mouse-follows-focus")
+        .arg("enable")
         .output()
         .expect("failed to execute process");
 }

@@ -8,6 +8,7 @@ use std::{
 pub mod constants;
 pub mod flags;
 mod listener;
+pub mod winplayer;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
 use tauri::{
@@ -49,7 +50,7 @@ fn main() {
 
 #[tauri::command]
 fn set_komorebi_offset(offset: &str) {
-    let _ = execute_komorebi_command("offset", &[offset]);
+    execute_komorebi_command("global-work-area-offset", &["0", offset, "0", offset]);
 }
 
 #[tauri::command]
@@ -72,6 +73,7 @@ fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
     let mut cmd = Command::new(KOMOREBI_CLI_EXE);
     cmd.arg(command);
     for arg in args {
+        println!("{}", arg);
         cmd.arg(arg);
     }
     if !cfg!(debug_assertions) {

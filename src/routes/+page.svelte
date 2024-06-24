@@ -19,6 +19,14 @@
 	}).then((res) => {
 		console.log(res);
 	});
+	invoke('get_player_status')
+		.then((res) => {
+			console.log(res);
+			console.log('getting player status');
+		})
+		.catch((err) => {
+			console.error(err);
+		});
 	const setWindowSize = async (window: WindowManager, width: number, height: number) => {
 		const innerSize = await window.innerSize();
 		innerSize.width = width;

@@ -14,6 +14,8 @@ use constants::KOMOREBI_CLI_EXE;
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
+use winplayer::{clplayermanager::ClPlayerManager, cltypes::ClStatus};
+use winplayer::{player, playermanager::PlayerManager};
 
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
@@ -28,7 +30,8 @@ fn main() {
             get_komorebi_status,
             switch_to_workspace,
             komorebi_init_event_listener,
-            set_komorebi_offset
+            set_komorebi_offset,
+            get_player_status
         ])
         .system_tray(system_tray)
         .on_system_tray_event(|app, event| match event {
@@ -51,6 +54,36 @@ fn main() {
 #[tauri::command]
 fn set_komorebi_offset(offset: &str) {
     execute_komorebi_command("global-work-area-offset", &["0", offset, "0", offset]);
+}
+
+#[tauri::command]
+async fn get_player_status() {
+    let mut player_manager = ClPlayerManager::new(PlayerManager::new().await.unwrap());
+    loop {
+        unsafe {
+            let evt = player_manager.poll_next_event().await;
+            println!("{}", evt);
+            match evt.as_str() {
+                "ActiveSessionChanged" => {
+                    let player = player_manager.get_active_session();
+                    if let Some(player) = player {
+                        let status = player.get_status().await;
+                        println!("{:?}", status);
+                    } else {
+                        println!("No active session");
+                    }
+                }
+                "SystemSessionChanged" => {
+                    player_manager.update_sessions(None);
+                }
+                "SessionsChanged" => {
+                    player_manager.update_sessions(None);
+                }
+                _ => {}
+            }
+            // println!("{:?}", status);
+        }
+    }
 }
 
 #[tauri::command]

@@ -94,8 +94,8 @@
 					{#if workspace}
 						<button
 							class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-success' : ''}`}
-							on:click={() => openWorkspace(mIdx, wIdx)}
-							>{workspace.name ?? (wIdx + 1).toString()}</button
+							on:click|preventDefault|stopPropagation|capture|trusted={() =>
+								openWorkspace(mIdx, wIdx)}>{workspace.name ?? (wIdx + 1).toString()}</button
 						>
 					{/if}
 				{/each}

@@ -4,8 +4,18 @@
 use std::process::Command;
 mod listener;
 use crate::listener::komorebi_init_event_listener;
+use tauri::{
+    CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
+};
 
 fn main() {
+    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
+    let hide = CustomMenuItem::new("hide".to_string(), "Hide");
+    let tray_menu = SystemTrayMenu::new()
+        .add_item(quit)
+        .add_native_item(SystemTrayMenuItem::Separator)
+        .add_item(hide);
+    let system_tray = SystemTray::new().with_menu(tray_menu);
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             get_komorebi_status,
@@ -13,6 +23,20 @@ fn main() {
             komorebi_init_event_listener,
             set_komorebi_offset
         ])
+        .system_tray(system_tray)
+        .on_system_tray_event(|app, event| match event {
+            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
+                "quit" => {
+                    std::process::exit(0);
+                }
+                "hide" => {
+                    let window = app.get_window("main").unwrap();
+                    window.hide().unwrap();
+                }
+                _ => {}
+            },
+            _ => {}
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -47,14 +71,14 @@ fn switch_to_workspace(workspace: &str, monitor: &str) {
         .output()
         .expect("failed to execute process");
     // wait for the command to finish
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    //std::thread::sleep(std::time::Duration::from_millis(50));
     Command::new("komorebic")
         .arg("focus-monitor-workspace")
         .arg(monitor)
         .arg(workspace)
         .output()
         .expect("failed to execute process");
-    std::thread::sleep(std::time::Duration::from_millis(50));
+    // std::thread::sleep(std::time::Duration::from_millis(50));
     Command::new("komorebic")
         .arg("mouse-follows-focus")
         .arg("enable")

@@ -1,7 +1,10 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{os::windows::process::CommandExt, process::Command};
+use std::{
+    os::windows::process::CommandExt,
+    process::{Command, Output},
+};
 pub mod flags;
 mod listener;
 use crate::listener::komorebi_init_event_listener;
@@ -44,50 +47,38 @@ fn main() {
 
 #[tauri::command]
 fn set_komorebi_offset(offset: &str) {
-    Command::new("komorebic")
-        .arg("global-work-area-offset")
-        .arg("0")
-        .arg(offset)
-        .arg("0")
-        .arg(offset)
-        .creation_flags(flags::CREATE_NO_WINDOW)
-        .output()
-        .expect("failed to execute process");
+    let _ = execute_komorebi_command("offset", &[offset]);
 }
 
 #[tauri::command]
 fn get_komorebi_status() -> String {
-    let output = Command::new("komorebic")
-        .arg("state")
-        .creation_flags(flags::CREATE_NO_WINDOW)
-        .output()
-        .expect("failed to execute process");
-
+    let output: Output = execute_komorebi_command("state", &[]);
     String::from_utf8(output.stdout).unwrap()
 }
 
 #[tauri::command]
 async fn switch_to_workspace(workspace: String, monitor: String) {
-    Command::new("komorebic")
-        .arg("mouse-follows-focus")
-        .arg("disable")
-        .creation_flags(flags::CREATE_NO_WINDOW)
-        .output()
-        .expect("failed to execute process");
-    // wait for the command to finish
-    //std::thread::sleep(std::time::Duration::from_millis(50));
-    Command::new("komorebic")
-        .arg("focus-monitor-workspace")
-        .arg(monitor)
-        .arg(workspace)
-        .creation_flags(flags::CREATE_NO_WINDOW)
-        .output()
-        .expect("failed to execute process");
-    // std::thread::sleep(std::time::Duration::from_millis(50));
-    Command::new("komorebic")
-        .arg("mouse-follows-focus")
-        .arg("enable")
-        .creation_flags(flags::CREATE_NO_WINDOW)
-        .output()
-        .expect("failed to execute process");
+    execute_komorebi_command("mouse-follows-focus", &["disable"]);
+    execute_komorebi_command(
+        "focus-monitor-workspace",
+        &[monitor.as_str(), workspace.as_str()],
+    );
+    execute_komorebi_command("mouse-follows-focus", &["enable"]);
+}
+
+fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
+    let mut cmd = Command::new("komorebic");
+    cmd.arg(command);
+    for arg in args {
+        cmd.arg(arg);
+    }
+    if !cfg!(debug_assertions) {
+        cmd.creation_flags(flags::CREATE_NO_WINDOW);
+    } else {
+        // for some reason, creation_flags causes weird behavior in debug mode
+        println!("running in dev mode");
+    }
+
+    let output = cmd.output();
+    return output.expect("failed to execute process");
 }

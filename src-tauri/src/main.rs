@@ -1,7 +1,8 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::process::Command;
+use std::{os::windows::process::CommandExt, process::Command};
+pub mod flags;
 mod listener;
 use crate::listener::komorebi_init_event_listener;
 use tauri::{
@@ -49,6 +50,7 @@ fn set_komorebi_offset(offset: &str) {
         .arg(offset)
         .arg("0")
         .arg(offset)
+        .creation_flags(flags::CREATE_NO_WINDOW)
         .output()
         .expect("failed to execute process");
 }
@@ -57,6 +59,7 @@ fn set_komorebi_offset(offset: &str) {
 fn get_komorebi_status() -> String {
     let output = Command::new("komorebic")
         .arg("state")
+        .creation_flags(flags::CREATE_NO_WINDOW)
         .output()
         .expect("failed to execute process");
 
@@ -64,10 +67,11 @@ fn get_komorebi_status() -> String {
 }
 
 #[tauri::command]
-fn switch_to_workspace(workspace: &str, monitor: &str) {
+async fn switch_to_workspace(workspace: String, monitor: String) {
     Command::new("komorebic")
         .arg("mouse-follows-focus")
         .arg("disable")
+        .creation_flags(flags::CREATE_NO_WINDOW)
         .output()
         .expect("failed to execute process");
     // wait for the command to finish
@@ -76,12 +80,14 @@ fn switch_to_workspace(workspace: &str, monitor: &str) {
         .arg("focus-monitor-workspace")
         .arg(monitor)
         .arg(workspace)
+        .creation_flags(flags::CREATE_NO_WINDOW)
         .output()
         .expect("failed to execute process");
     // std::thread::sleep(std::time::Duration::from_millis(50));
     Command::new("komorebic")
         .arg("mouse-follows-focus")
         .arg("enable")
+        .creation_flags(flags::CREATE_NO_WINDOW)
         .output()
         .expect("failed to execute process");
 }

@@ -8,6 +8,7 @@
 	let monitors: KomorebiMonitor[] = [];
 	let workspaces: KomorebiWorkspace[] = [];
 	let focusedMonitor = 0;
+	let komorebiBusy = false;
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -29,9 +30,14 @@
 			});
 			console.log(workspaces);
 		});
-		invoke('komorebi_init_event_listener').then((res) => {
-			console.log(res);
-		});
+		invoke('komorebi_init_event_listener')
+			.then((res) => {
+				console.log(res);
+				console.log('Komorebi event listener initialized');
+			})
+			.catch((err) => {
+				console.error(err);
+			});
 		invoke('set_komorebi_offset', {
 			offset: (barHeight / 2 - 10).toString()
 		}).then((res) => {
@@ -59,12 +65,23 @@
 		window.setSize(new LogicalSize(width, height));
 	};
 	const openWorkspace = (monitor: number, workspace: number) => {
+		if (komorebiBusy) {
+			return;
+		}
+		komorebiBusy = true;
 		invoke('switch_to_workspace', {
 			monitor: monitor.toString(),
 			workspace: workspace.toString()
-		}).then((res) => {
-			console.log(res);
-		});
+		})
+			.then((res) => {
+				console.log(res);
+			})
+			.catch((err) => {
+				console.error(err);
+			})
+			.finally(() => {
+				komorebiBusy = false;
+			});
 	};
 </script>
 

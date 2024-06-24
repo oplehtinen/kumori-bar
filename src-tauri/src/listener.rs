@@ -2,9 +2,8 @@
 // license: MIT
 
 pub const KOMOREBI_NAMED_PIPE: &str = r"\\.\pipe\bar-komorebi";
-pub const APP_NAME: &str = "bar";
+pub const APP_NAME: &str = "window-bar";
 const KOMOREBI_CLI_EXE: &str = "komorebic";
-const CREATE_NO_WINDOW: u32 = 0x08000000;
 use ::windows::core::PCSTR;
 use ::windows::Win32;
 use serde_json::Value;
@@ -22,13 +21,15 @@ use Win32::{
     },
 };
 
+use crate::flags;
+
 pub fn subscribe(pipe_name: &str) -> ExitStatus {
     let mut cmd = Command::new(KOMOREBI_CLI_EXE);
     cmd.arg("subscribe");
     cmd.arg(pipe_name);
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
-    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd.creation_flags(flags::CREATE_NO_WINDOW);
     cmd.spawn().unwrap().wait().unwrap()
 }
 
@@ -39,7 +40,7 @@ pub fn unmanage_app_exe() -> ExitStatus {
     cmd.arg(format!("{}.exe", APP_NAME));
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
-    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd.creation_flags(flags::CREATE_NO_WINDOW);
     cmd.spawn().unwrap().wait().unwrap()
 }
 

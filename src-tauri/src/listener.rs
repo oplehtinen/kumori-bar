@@ -1,9 +1,7 @@
 // code modified from https://github.com/da-rth/yasb/blob/tauri-port/src-tauri/src/widgets/komorebi/listener.rs
 // license: MIT
-
-pub const KOMOREBI_NAMED_PIPE: &str = r"\\.\pipe\bar-komorebi";
-pub const APP_NAME: &str = "window-bar";
-const KOMOREBI_CLI_EXE: &str = "komorebic";
+use crate::constants::{APP_NAME, KOMOREBI_CLI_EXE, KOMOREBI_NAMED_PIPE};
+use crate::flags;
 use ::windows::core::PCSTR;
 use ::windows::Win32;
 use serde_json::Value;
@@ -20,8 +18,6 @@ use Win32::{
         PIPE_READMODE_BYTE, PIPE_TYPE_BYTE, PIPE_WAIT,
     },
 };
-
-use crate::flags;
 
 pub fn subscribe(pipe_name: &str) -> ExitStatus {
     let mut cmd = Command::new(KOMOREBI_CLI_EXE);
@@ -188,7 +184,6 @@ fn komorebi_event_listener(app_handle: &AppHandle) -> () {
 
 #[tauri::command]
 pub fn komorebi_init_event_listener(app_handle: AppHandle) -> () {
-    println!("haloo");
     KOMOREBI_INIT_ONCE.call_once(move || {
         log::info!("KomorebiEventListener: Initialisng Event Listener.");
 

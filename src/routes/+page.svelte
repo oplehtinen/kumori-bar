@@ -7,7 +7,6 @@
 	let status: KomorebiStatus;
 	let monitors: KomorebiMonitor[] = [];
 	let workspaces: KomorebiWorkspace[] = [];
-	let focusedMonitor = 0;
 	let komorebiBusy = false;
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
@@ -47,7 +46,6 @@
 			console.log(event);
 			status = (event.payload.state as KomorebiStatus) || {};
 			monitors = status.monitors?.elements || [];
-			focusedMonitor = status.monitors?.focused || 0;
 			console.log(monitors);
 			// for each monitor, create a workspace
 			monitors.forEach((monitor) => {
@@ -122,18 +120,5 @@
 			{/each}
 		{/if}
 	</div>
-	<div class="flex-none">
-		<ul class="menu menu-horizontal px-1">
-			<li><a>Link</a></li>
-			<li>
-				<details>
-					<summary>Parent</summary>
-					<ul class="bg-base-100 rounded-t-none p-2">
-						<li><a>Link 1</a></li>
-						<li><a>Link 2</a></li>
-					</ul>
-				</details>
-			</li>
-		</ul>
-	</div>
+	<div class="flex-none">Placeholder</div>
 </div>

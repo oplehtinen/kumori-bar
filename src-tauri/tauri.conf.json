@@ -8,7 +8,7 @@
     "withGlobalTauri": false
   },
   "package": {
-    "productName": "window-bar",
+    "productName": "kumori-bar",
     "version": "0.1.0"
   },
   "tauri": {
@@ -33,7 +33,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.op.window-bar",
+      "identifier": "com.oplehtinen.kumori-bar",
       "longDescription": "",
       "macOS": {
         "entitlements": null,

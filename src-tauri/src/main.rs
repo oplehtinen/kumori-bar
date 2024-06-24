@@ -5,9 +5,11 @@ use std::{
     os::windows::process::CommandExt,
     process::{Command, Output},
 };
+pub mod constants;
 pub mod flags;
 mod listener;
 use crate::listener::komorebi_init_event_listener;
+use constants::KOMOREBI_CLI_EXE;
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
@@ -67,7 +69,7 @@ async fn switch_to_workspace(workspace: String, monitor: String) {
 }
 
 fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
-    let mut cmd = Command::new("komorebic");
+    let mut cmd = Command::new(KOMOREBI_CLI_EXE);
     cmd.arg(command);
     for arg in args {
         cmd.arg(arg);
@@ -76,7 +78,6 @@ fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
         cmd.creation_flags(flags::CREATE_NO_WINDOW);
     } else {
         // for some reason, creation_flags causes weird behavior in debug mode
-        println!("running in dev mode");
     }
 
     let output = cmd.output();

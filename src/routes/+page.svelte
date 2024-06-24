@@ -1,13 +1,9 @@
 <script lang="ts">
+	import WorkspaceWidget from './WorkspaceWidget.svelte';
+
 	import { onMount } from 'svelte';
-	import { listen } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
-	import { LogicalSize, PhysicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
-	import type { KomorebiMonitor, KomorebiStatus, KomorebiWorkspace } from '$lib/types';
-	let status: KomorebiStatus;
-	let monitors: KomorebiMonitor[] = [];
-	let workspaces: KomorebiWorkspace[] = [];
-	let komorebiBusy = false;
+	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
+	import { invoke } from '@tauri-apps/api';
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -17,69 +13,17 @@
 		}
 		const screenWidth = monitor.size.width;
 		setWindowSize(appWindow, screenWidth, barHeight);
-
-		invoke('get_komorebi_status').then((res) => {
-			status = JSON.parse(res as string);
-			monitors = status.monitors.elements;
-			console.log(monitors);
-			// for each monitor, create a workspace
-			monitors.forEach((monitor) => {
-				console.log(monitor);
-				workspaces.push(...monitor.workspaces.elements);
-			});
-			console.log(workspaces);
-		});
-		invoke('komorebi_init_event_listener')
-			.then((res) => {
-				console.log(res);
-				console.log('Komorebi event listener initialized');
-			})
-			.catch((err) => {
-				console.error(err);
-			});
-		invoke('set_komorebi_offset', {
-			offset: (barHeight / 2 - 10).toString()
-		}).then((res) => {
-			console.log(res);
-		});
-		listen('komorebi_status', (event: any) => {
-			console.log(event);
-			status = (event.payload.state as KomorebiStatus) || {};
-			monitors = status.monitors?.elements || [];
-			console.log(monitors);
-			// for each monitor, create a workspace
-			monitors.forEach((monitor) => {
-				workspaces = [];
-				console.log(monitor);
-				workspaces.push(...monitor.workspaces.elements);
-			});
-			console.log(workspaces);
-		});
+	});
+	invoke('set_komorebi_offset', {
+		offset: (barHeight / 2 - 10).toString()
+	}).then((res) => {
+		console.log(res);
 	});
 	const setWindowSize = async (window: WindowManager, width: number, height: number) => {
 		const innerSize = await window.innerSize();
 		innerSize.width = width;
 		innerSize.height = height;
 		window.setSize(new LogicalSize(width, height));
-	};
-	const openWorkspace = (monitor: number, workspace: number) => {
-		if (komorebiBusy) {
-			return;
-		}
-		komorebiBusy = true;
-		invoke('switch_to_workspace', {
-			monitor: monitor.toString(),
-			workspace: workspace.toString()
-		})
-			.then((res) => {
-				console.log(res);
-			})
-			.catch((err) => {
-				console.error(err);
-			})
-			.finally(() => {
-				komorebiBusy = false;
-			});
 	};
 </script>
 
@@ -103,22 +47,7 @@
 		</button>
 	</div>
 	<div class="flex-grow gap-2">
-		{#if status}
-			{#each monitors as monitor, mIdx}
-				{#each monitor.workspaces.elements as workspace, wIdx}
-					{#if workspace}
-						<button
-							class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-success' : ''}`}
-							on:click|preventDefault|stopPropagation|capture|trusted={() =>
-								openWorkspace(mIdx, wIdx)}>{workspace.name ?? (wIdx + 1).toString()}</button
-						>
-					{/if}
-				{/each}
-				{#if mIdx < monitors.length - 1}
-					<div class="divider divider-horizontal"></div>
-				{/if}
-			{/each}
-		{/if}
+		<WorkspaceWidget></WorkspaceWidget>
 	</div>
 	<div class="flex-none">Placeholder</div>
 </div>

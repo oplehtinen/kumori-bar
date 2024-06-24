@@ -43,8 +43,7 @@ pub fn unmanage_app_exe() -> ExitStatus {
 const PIPE_BUFFER: u32 = 1048576;
 const PIPE_BUFFER_USIZE: usize = 1048576;
 const KOMOREBI_INIT_ONCE: Once = Once::new();
-const KOMOREBI_IGNORED_EVENTS: &'static [&'static str] =
-    &["Cloak", "Uncloak", "AddSubscriber", "FocusChange", "State"];
+const KOMOREBI_IGNORED_EVENTS: &'static [&'static str] = &["AddSubscriber", "FocusChange", "State"];
 
 fn create_named_pipe(pipe_name: &str) -> ::windows::core::Result<HANDLE> {
     log::info!("KomorebiEventListener: creating named pipe: {}.", pipe_name);

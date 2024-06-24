@@ -33,13 +33,6 @@
 			status = (event.payload.state as KomorebiStatus) || {};
 			monitors = status.monitors?.elements || [];
 			console.log(monitors);
-			// for each monitor, create a workspace
-			monitors.forEach((monitor) => {
-				workspaces = [];
-				console.log(monitor);
-				workspaces.push(...monitor.workspaces.elements);
-			});
-			console.log(workspaces);
 		});
 	});
 	const openWorkspace = (monitor: number, workspace: number) => {

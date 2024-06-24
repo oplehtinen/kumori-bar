@@ -5,15 +5,17 @@ use std::{
     os::windows::process::CommandExt,
     process::{Command, Output},
 };
+
 pub mod constants;
 pub mod flags;
 mod listener;
+mod media_controls;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
+
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
-
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
@@ -27,7 +29,7 @@ fn main() {
             get_komorebi_status,
             switch_to_workspace,
             komorebi_init_event_listener,
-            set_komorebi_offset
+            set_komorebi_offset,
         ])
         .system_tray(system_tray)
         .on_system_tray_event(|app, event| match event {

@@ -1,0 +1,30 @@
+{
+  "name": "src-server",
+  "version": "1.0.0",
+  "description": "nodejs binary",
+  "main": "index.js",
+  "scripts": {
+    "server:dev": "tsx ./index.ts --watch",
+    "server:start": "tsx ./index.ts",
+    "server:build": "node esbuild.config.mjs && pkg bundle/server.bundle.js --config pkg.json -o ../src-tauri/bin/server-$(rustc -Vv | grep host | cut -f2 -d' ') -d"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hono/node-server": "^1.11.4",
+    "@innei/winplayer-rs": "^0.1.2-fork.1",
+    "hono": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.8",
+    "@typescript-eslint/eslint-plugin": "^7.14.1",
+    "@typescript-eslint/parser": "^7.14.1",
+    "@yao-pkg/pkg": "^5.12.0",
+    "esbuild": "^0.21.5",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.3.2",
+    "tsx": "^4.15.7",
+    "typescript": "^5.5.2"
+  }
+}

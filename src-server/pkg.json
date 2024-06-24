@@ -1,0 +1,6 @@
+{
+    "targets": [
+        "node20-windows-x64"
+    ],
+    "assets": "migrations/**/*"
+}

@@ -4,6 +4,8 @@
 	import { onMount } from 'svelte';
 	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
 	import { invoke } from '@tauri-apps/api';
+	import MediaWidget from './MediaWidget.svelte';
+
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -13,6 +15,9 @@
 		}
 		const screenWidth = monitor.size.width;
 		setWindowSize(appWindow, screenWidth, barHeight);
+	});
+	invoke('show_current_track').then((res) => {
+		console.log(res);
 	});
 	invoke('set_komorebi_offset', {
 		offset: (barHeight / 2 - 10).toString()
@@ -47,6 +52,7 @@
 		</button>
 	</div>
 	<div class="flex-grow gap-2">
+		<MediaWidget></MediaWidget>
 		<WorkspaceWidget></WorkspaceWidget>
 	</div>
 	<div class="flex-none">Placeholder</div>

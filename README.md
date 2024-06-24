@@ -3,6 +3,8 @@ A simple status bar, designed to be used with the [Komorebi tiling window manage
 
 Thanks to developers of [Zebar](https://github.com/glzr-io/zebar) and [yasb](https://github.com/da-rth/yasb/tree/tauri-port) for making the navigation of the Komorebi api and Tauri much easier.
 
+![preview](image.png)
+
 ## Getting started / Download
 - Currently, you need to build from source.
 

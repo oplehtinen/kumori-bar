@@ -4,6 +4,7 @@
 use std::{
     os::windows::process::CommandExt,
     process::{Command, Output},
+    time::Duration,
 };
 pub mod constants;
 pub mod flags;
@@ -14,7 +15,8 @@ use constants::KOMOREBI_CLI_EXE;
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
-use winplayer::{clplayermanager::ClPlayerManager, cltypes::ClStatus};
+use tokio::time::timeout;
+use winplayer::{clplayer::ClPlayer, clplayermanager::ClPlayerManager, cltypes::ClStatus};
 use winplayer::{player, playermanager::PlayerManager};
 
 fn main() {
@@ -57,31 +59,79 @@ fn set_komorebi_offset(offset: &str) {
 }
 
 #[tauri::command]
-async fn get_player_status() {
-    let mut player_manager = ClPlayerManager::new(PlayerManager::new().await.unwrap());
-    loop {
-        unsafe {
+async fn get_player_status() -> Result<(), ()> {
+    //spawn a new thread to poll player events, so the main thread can continue. it needs to be async.
+    println!("haloo");
+    start_manager_loop().await;
+    //let _ = tauri::async_runtime::spawn(async move { start_player_loop(player_manager) }).await;
+    Ok(())
+}
+async fn start_manager_loop() {
+    let mut player_manager: ClPlayerManager =
+        ClPlayerManager::new(PlayerManager::new().await.unwrap());
+    let mut player: Option<ClPlayer>;
+    let mut aumid: String;
+    println!("started loop");
+    unsafe {
+        loop {
+            //println!("looping");
             let evt = player_manager.poll_next_event().await;
-            println!("{}", evt);
             match evt.as_str() {
                 "ActiveSessionChanged" => {
-                    let player = player_manager.get_active_session();
+                    //player = None;
+                    player = player_manager.get_active_session();
                     if let Some(player) = player {
+                        aumid = player.get_aumid().await;
                         let status = player.get_status().await;
                         println!("{:?}", status);
+                        println!("{}", aumid);
+                        start_player_loop(player).await;
                     } else {
                         println!("No active session");
                     }
                 }
                 "SystemSessionChanged" => {
                     player_manager.update_sessions(None);
+                    let system_session = player_manager.get_system_session();
+                    if let Some(player) = system_session {
+                        aumid = player.get_aumid().await;
+                    }
                 }
                 "SessionsChanged" => {
                     player_manager.update_sessions(None);
+                    let system_session = player_manager.get_system_session();
+                    if let Some(player) = system_session {
+                        aumid = player.get_aumid().await;
+                    }
                 }
                 _ => {}
             }
+
             // println!("{:?}", status);
+        }
+    }
+}
+
+async fn start_player_loop(mut player: ClPlayer) {
+    unsafe {
+        loop {
+            let player_evt: String = player.poll_next_event().await;
+            match player_evt.as_str() {
+                "PlaybackInfoChanged" => {
+                    let status = player.get_status().await;
+                    println!("{:?}", status);
+                }
+                "MediaPropertiesChanged" => {
+                    let status = player.get_status().await;
+                    println!("{:?}", status);
+                }
+                "TimelinePropertiesChanged" => {
+                    let pos = player.get_position(false).await;
+                    println!("{:?}", pos);
+                }
+                _ => {}
+            }
+            println!("{}", player_evt);
         }
     }
 }

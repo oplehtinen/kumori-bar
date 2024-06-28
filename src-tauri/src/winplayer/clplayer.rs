@@ -15,7 +15,7 @@ impl ClPlayer {
         ClPlayer { player }
     }
 
-    pub async unsafe fn poll_next_event(&mut self) -> String {
+    pub async fn poll_next_event(&mut self) -> String {
         match self.player.lock().await.poll_next_event().await {
             Some(PlayerEvent::PlaybackInfoChanged) => String::from("PlaybackInfoChanged"),
             Some(PlayerEvent::MediaPropertiesChanged) => String::from("MediaPropertiesChanged"),

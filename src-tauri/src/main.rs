@@ -13,7 +13,6 @@ use std::{
 pub mod constants;
 pub mod flags;
 mod listener;
-pub mod winplayer;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
 use tauri::{
@@ -21,8 +20,9 @@ use tauri::{
 };
 use tokio::sync::{Mutex, Notify};
 use tokio::time::timeout;
-use winplayer::{clplayer::ClPlayer, clplayermanager::ClPlayerManager, cltypes::ClStatus};
-use winplayer::{player, playermanager::PlayerManager};
+use WinPlayer_Rust::clplayer::ClPlayer;
+use WinPlayer_Rust::clplayermanager::ClPlayerManager;
+use WinPlayer_Rust::playermanager::PlayerManager;
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");

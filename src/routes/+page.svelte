@@ -5,6 +5,7 @@
 	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
 	import { invoke } from '@tauri-apps/api';
 	import { listen } from '@tauri-apps/api/event';
+	import MediaWidget from './MediaWidget.svelte';
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -20,17 +21,6 @@
 	}).then((res) => {
 		console.log(res);
 	});
-	invoke('get_player_status')
-		.then((res) => {
-			console.log(res);
-			console.log('getting player status');
-		})
-		.catch((err) => {
-			console.error(err);
-		});
-	listen('player_status', (event: any) => {
-		console.log(event);
-	});
 	const setWindowSize = async (window: WindowManager, width: number, height: number) => {
 		const innerSize = await window.innerSize();
 		innerSize.width = width;
@@ -39,7 +29,7 @@
 	};
 </script>
 
-<div class="navbar flex-grow-0 overflow-hidden text-white bg-transparent max-h-2 h-full}">
+<div class="navbar flex-grow-0 my-2 overflow-hidden text-white bg-transparent max-h-2 h-full}">
 	<div class="flex-1">
 		<button class="btn btn-ghost text-xl"
 			><svg
@@ -58,8 +48,10 @@
 			</svg>
 		</button>
 	</div>
-	<div class="flex-grow gap-2">
+	<div class="flex-grow gap-x-2">
 		<WorkspaceWidget></WorkspaceWidget>
 	</div>
-	<div class="flex-none">Placeholder</div>
+	<div class="flex-5">
+		<MediaWidget></MediaWidget>
+	</div>
 </div>

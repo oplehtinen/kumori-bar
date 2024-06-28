@@ -1,6 +1,9 @@
 # kumori-bar
 A simple status bar, designed to be used with the [Komorebi tiling window manager](https://lgug2z.github.io/komorebi/index.html).
 
+> [!WARNING]  
+> Still WIP, use at your own risk.
+
 Thanks to developers of [Zebar](https://github.com/glzr-io/zebar) and [yasb](https://github.com/da-rth/yasb/tree/tauri-port) for making the navigation of the Komorebi api and Tauri much easier.
 
 ![preview](preview.png)

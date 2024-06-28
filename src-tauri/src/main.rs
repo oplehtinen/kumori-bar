@@ -4,6 +4,10 @@
 use std::{
     os::windows::process::CommandExt,
     process::{Command, Output},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
     time::Duration,
 };
 pub mod constants;
@@ -15,10 +19,10 @@ use constants::KOMOREBI_CLI_EXE;
 use tauri::{
     CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu, SystemTrayMenuItem,
 };
+use tokio::sync::{Mutex, Notify};
 use tokio::time::timeout;
 use winplayer::{clplayer::ClPlayer, clplayermanager::ClPlayerManager, cltypes::ClStatus};
 use winplayer::{player, playermanager::PlayerManager};
-
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
@@ -62,77 +66,112 @@ fn set_komorebi_offset(offset: &str) {
 async fn get_player_status() -> Result<(), ()> {
     //spawn a new thread to poll player events, so the main thread can continue. it needs to be async.
     println!("haloo");
-    start_manager_loop().await;
+    tokio::spawn(async move {
+        let player_manager: Arc<Mutex<PlayerManager>> =
+            Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
+        let cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
+        start_manager_loop(cl_player_manager).await
+    });
     //let _ = tauri::async_runtime::spawn(async move { start_player_loop(player_manager) }).await;
     Ok(())
 }
-async fn start_manager_loop() {
-    let mut player_manager: ClPlayerManager =
-        ClPlayerManager::new(PlayerManager::new().await.unwrap());
+async fn start_manager_loop(mut player_manager: ClPlayerManager) {
     let mut player: Option<ClPlayer>;
     let mut aumid: String;
+    let stop_flag = Arc::new(AtomicBool::new(false));
+    let notify = Arc::new(Notify::new());
     println!("started loop");
-    unsafe {
-        loop {
-            //println!("looping");
-            let evt = player_manager.poll_next_event().await;
-            match evt.as_str() {
-                "ActiveSessionChanged" => {
-                    //player = None;
-                    player = player_manager.get_active_session();
-                    if let Some(player) = player {
-                        aumid = player.get_aumid().await;
-                        let status = player.get_status().await;
-                        println!("{:?}", status);
-                        println!("{}", aumid);
-                        start_player_loop(player).await;
-                    } else {
-                        println!("No active session");
-                    }
-                }
-                "SystemSessionChanged" => {
-                    player_manager.update_sessions(None);
-                    let system_session = player_manager.get_system_session();
-                    if let Some(player) = system_session {
-                        aumid = player.get_aumid().await;
-                    }
-                }
-                "SessionsChanged" => {
-                    player_manager.update_sessions(None);
-                    let system_session = player_manager.get_system_session();
-                    if let Some(player) = system_session {
-                        aumid = player.get_aumid().await;
-                    }
-                }
-                _ => {}
-            }
+    loop {
+        println!("looping manager");
+        let evt = player_manager.poll_next_event().await;
 
-            // println!("{:?}", status);
+        match evt.as_str() {
+            "ActiveSessionChanged" => {
+                //player = None;
+                println!("Active session changed");
+                player = player_manager.get_active_session().await;
+                if let Some(player) = player {
+                    aumid = player.get_aumid().await;
+                    let status = player.get_status().await;
+                    //println!("{:?}", status);
+
+                    stop_flag.store(false, Ordering::Relaxed);
+                    let stop_flag_clone = stop_flag.clone();
+                    let notify_clone = notify.clone();
+                    tauri::async_runtime::spawn(async move {
+                        start_player_loop(player, stop_flag_clone, notify_clone).await;
+                    });
+                    println!("Started player loop");
+                } else {
+                    println!("No active session");
+                }
+            }
+            "SystemSessionChanged" => {
+                println!("System session changed");
+                let _ = player_manager.update_system_session().await;
+                let system_session = player_manager.get_system_session().await;
+                if let Some(player) = system_session {
+                    stop_flag.store(true, Ordering::Relaxed);
+                    // notify the player loop to stop
+                    notify.notify_one();
+                    println!("Stopped player loop");
+                    stop_flag.store(false, Ordering::Relaxed);
+                    let stop_flag_clone = stop_flag.clone();
+                    let notify_clone = notify.clone();
+                    aumid = player.get_aumid().await;
+                    tauri::async_runtime::spawn(async move {
+                        start_player_loop(player, stop_flag_clone, notify_clone).await;
+                    });
+
+                    //let status = player.get_status().await;
+                    // println!("{:?}", status);
+                }
+            }
+            "SessionsChanged" => {
+                println!("Sessions changed");
+                player_manager.update_sessions(None).await;
+                let system_session = player_manager.get_system_session().await;
+                if let Some(player) = system_session {
+                    // send the stop signal to the player loop
+                    stop_flag.store(true, Ordering::Relaxed);
+                    // notify the player loop to stop
+                    notify.notify_one();
+                    println!("Stopped player loop");
+                    aumid = player.get_aumid().await;
+                    let status = player.get_status().await;
+                    // println!("{:?}", status);
+                }
+            }
+            _ => {} // println!("{:?}", status);
         }
     }
 }
 
-async fn start_player_loop(mut player: ClPlayer) {
-    unsafe {
-        loop {
-            let player_evt: String = player.poll_next_event().await;
-            match player_evt.as_str() {
-                "PlaybackInfoChanged" => {
-                    let status = player.get_status().await;
-                    println!("{:?}", status);
-                }
-                "MediaPropertiesChanged" => {
-                    let status = player.get_status().await;
-                    println!("{:?}", status);
-                }
-                "TimelinePropertiesChanged" => {
-                    let pos = player.get_position(false).await;
-                    println!("{:?}", pos);
-                }
-                _ => {}
-            }
-            println!("{}", player_evt);
+async fn start_player_loop(mut player: ClPlayer, stop_flag: Arc<AtomicBool>, notify: Arc<Notify>) {
+    loop {
+        println!("looping");
+        if stop_flag.load(Ordering::Relaxed) {
+            println!("Stopping player loop");
+            break;
         }
+        let player_evt: String = player.poll_next_event().await;
+        match player_evt.as_str() {
+            "PlaybackInfoChanged" => {
+                let status = player.get_status().await;
+                //println!("{:?}", status);
+            }
+            "MediaPropertiesChanged" => {
+                let status = player.get_status().await;
+                //println!("{:?}", status);
+            }
+            "TimelinePropertiesChanged" => {
+                let pos = player.get_position(false).await;
+                println!("{:?}", pos);
+            }
+            _ => {}
+        }
+        println!("we got here");
+        //notify.notified().await;
     }
 }
 

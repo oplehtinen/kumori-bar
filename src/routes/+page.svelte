@@ -4,6 +4,7 @@
 	import { onMount } from 'svelte';
 	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
 	import { invoke } from '@tauri-apps/api';
+	import { listen } from '@tauri-apps/api/event';
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -27,6 +28,9 @@
 		.catch((err) => {
 			console.error(err);
 		});
+	listen('player_status', (event: any) => {
+		console.log(event);
+	});
 	const setWindowSize = async (window: WindowManager, width: number, height: number) => {
 		const innerSize = await window.innerSize();
 		innerSize.width = width;

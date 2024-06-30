@@ -15,15 +15,14 @@ pub mod flags;
 mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
-use crate::player::start_manager_loop;
-use crate::player::start_player_loop;
 use constants::KOMOREBI_CLI_EXE;
+use player::poll_manager_and_player_concurrently;
 use tauri::{
     AppHandle, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
     SystemTrayMenuItem,
 };
 use tokio::sync::{Mutex, Notify};
-
+static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
 use WinPlayer_Rust::clplayermanager::ClPlayerManager;
 use WinPlayer_Rust::playermanager::PlayerManager;
 fn main() {
@@ -67,15 +66,27 @@ fn set_komorebi_offset(offset: &str) {
 
 #[tauri::command]
 async fn get_player_status(app_handle: AppHandle) -> Result<(), ()> {
-    //spawn a new thread to poll player events, so the main thread can continue. it needs to be async.
-    println!("haloo");
-    tokio::spawn(async move {
-        let player_manager: Arc<Mutex<PlayerManager>> =
-            Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
-        let cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
-        start_manager_loop(cl_player_manager, &app_handle).await
-    });
-    //let _ = tauri::async_runtime::spawn(async move { start_player_loop(player_manager) }).await;
+    // Check if the manager loop is already running
+    if MANAGER_LOOP_RUNNING
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_ok()
+    {
+        tokio::spawn(async move {
+            let player_manager: Arc<Mutex<PlayerManager>> =
+                Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
+            let mut cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
+
+            // Start the manager loop
+            // start_manager_loop(cl_player_manager, &app_handle).await;
+            poll_manager_and_player_concurrently(cl_player_manager, &app_handle).await;
+
+            // After the loop completes, reset the flag
+            MANAGER_LOOP_RUNNING.store(false, Ordering::SeqCst);
+        });
+    } else {
+        println!("Manager loop is already running.");
+    }
+
     Ok(())
 }
 

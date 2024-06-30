@@ -20,6 +20,10 @@
 			});
 		listen('player_status', (event: any) => {
 			console.log(event);
+			console.log(metadata);
+			if (!event.payload || (metadata != undefined && event.payload.artist == metadata.artist)) {
+				return;
+			}
 			// process the album art to an image
 			let albumArtData = event.payload.art_data.data;
 			let mimetype = event.payload.art_data.mimetype;
@@ -39,7 +43,10 @@
 		console.log('hiding controls');
 	};
 	const controlCmd = (cmd: string, aumid: string) => {
-		processing = true;
+		if (cmd !== 'play_pause') {
+			processing = true;
+		}
+
 		invoke(cmd, {
 			aumid: aumid.toString()
 		})

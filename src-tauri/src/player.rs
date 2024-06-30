@@ -1,11 +1,13 @@
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
+use tokio::time::Instant;
 use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
@@ -27,15 +29,49 @@ pub struct EvMetadata {
     pub length: f64,
     pub title: String,
 }
+struct Throttle {
+    last_call: Instant,
+    interval: Duration,
+}
+
+impl Throttle {
+    fn new(interval: Duration) -> Self {
+        Throttle {
+            last_call: Instant::now() - interval, // Initialize to allow immediate first call
+            interval,
+        }
+    }
+
+    // Check if the function can be called
+    async fn allow_call(&mut self) -> bool {
+        let now = Instant::now();
+        if now - self.last_call >= self.interval {
+            self.last_call = now;
+            true
+        } else {
+            false
+        }
+    }
+}
 pub async fn poll_manager_and_player_concurrently(
     mut manager: ClPlayerManager,
     app_handle: &AppHandle,
 ) {
     manager.update_sessions(None).await;
+    let throttle = Arc::new(Mutex::new(Throttle::new(tokio::time::Duration::from_secs(
+        1,
+    ))));
     loop {
         println!("loop start");
         // Step 1: Determine the active session
-
+        let should_call = {
+            let mut throttle = throttle.lock().await;
+            throttle.allow_call().await
+        };
+        if !should_call {
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            continue;
+        }
         let aumid = manager
             .figure_out_active_session()
             .await
@@ -107,7 +143,7 @@ pub async fn poll_manager_and_player_concurrently(
             }
 
             // Optional: Add a delay to prevent the loop from running too frequently
-            //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             println!("loop end");
             },
         }

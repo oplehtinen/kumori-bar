@@ -3,16 +3,6 @@
 version = 3
 
 [[package]]
-name = "WinPlayer-Rust"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "md5",
- "tokio",
- "windows 0.44.0",
-]
-
-[[package]]
 name = "addr2line"
 version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1407,7 +1397,6 @@ dependencies = [
 name = "kumori-bar"
 version = "0.1.0"
 dependencies = [
- "WinPlayer-Rust",
  "chrono",
  "log",
  "serde",
@@ -1416,6 +1405,7 @@ dependencies = [
  "tauri-build",
  "tokio",
  "windows 0.44.0",
+ "winplayer_lib",
 ]
 
 [[package]]
@@ -3766,6 +3756,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59b5e5f6c299a3c7890b876a2a587f3115162487e704907d9b6cd29473052ba1"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "winplayer_lib"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "md5",
+ "tokio",
+ "windows 0.44.0",
 ]
 
 [[package]]

@@ -6,7 +6,9 @@
 	import PauseIcon from './Icons/PauseIcon.svelte';
 	import NextIcon from './Icons/NextIcon.svelte';
 	import { hide } from '@tauri-apps/api/app';
-	let metadata;
+	import LoadingIcon from './Icons/LoadingIcon.svelte';
+	let metadata: any;
+	let processing = false;
 	onMount(async () => {
 		invoke('get_player_status')
 			.then((res) => {
@@ -36,36 +38,77 @@
 		controls = false;
 		console.log('hiding controls');
 	};
+	const controlCmd = (cmd: string, aumid: string) => {
+		processing = true;
+		invoke(cmd, {
+			aumid: aumid.toString()
+		})
+			.then((res) => {
+				console.log(res);
+			})
+			.catch((err) => {
+				console.error(err);
+			});
+	};
+	$: metadata, (processing = false);
 </script>
 
 {#if metadata}
-	<div on:mouseenter={showControls} on:mouseleave={hideControls}>
+	<div
+		on:mouseenter={showControls}
+		on:mouseleave={hideControls}
+		role="banner"
+		aria-roledescription="button"
+	>
 		<div
 			class="absolute {controls
 				? ''
 				: 'hidden'} top-4 right-8 flex justify-end items-center gap-x-2 z-10"
 		>
-			<button class="btn btn-square btn-outline">
+			<button
+				class="btn btn-square btn-outline"
+				on:click={() => controlCmd('previous', metadata.player_aumid)}
+			>
 				<PrevIcon></PrevIcon>
 			</button>
-			<button class="btn btn-square btn-outline">
+			<button
+				class="btn btn-square btn-outline"
+				on:click={() => controlCmd('play_pause', metadata.player_aumid)}
+			>
 				<PauseIcon></PauseIcon>
 			</button>
-			<button class="btn btn-square btn-outline">
+			<button
+				class="btn btn-square btn-outline"
+				on:click={() => controlCmd('next', metadata.player_aumid)}
+			>
 				<NextIcon></NextIcon>
 			</button>
 		</div>
 		<div class="stat relative z-0 justify-items-end {controls ? 'blur-sm' : ''}">
 			<div class="stat-figure text-secondary">
 				<div class="avatar">
-					<div class="w-8 rounded-full">
-						<img class="img-sm" src={metadata.albumArt} />
-					</div>
+					{#if processing}
+						<div class="skeleton h-8 w-8"></div>
+					{:else}
+						<div class="w-8 rounded-full">
+							<!-- svelte-ignore a11y-missing-attribute -->
+							<img class="img-sm" src={metadata.albumArt} />
+						</div>
+					{/if}
 				</div>
 			</div>
-			<div class="text-lg">{metadata.artist} - {metadata.title}</div>
+			<div class="text-lg">
+				{#if processing}
+					<LoadingIcon />
+				{:else}
+					{metadata.artist} - {metadata.title}{/if}
+			</div>
 			<div class="stat-title">
-				{metadata.album}
+				{#if processing}
+					<LoadingIcon />
+				{:else}
+					{metadata.album}
+				{/if}
 			</div>
 		</div>
 	</div>

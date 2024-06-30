@@ -15,15 +15,15 @@ mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
-use player::poll_manager_and_player_concurrently;
+use player::{next, play_pause, poll_manager_and_player_concurrently, previous};
 use tauri::{
     AppHandle, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
     SystemTrayMenuItem,
 };
 use tokio::sync::Mutex;
 static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
-use WinPlayer_Rust::clplayermanager::ClPlayerManager;
-use WinPlayer_Rust::playermanager::PlayerManager;
+use winplayer_lib::clplayermanager::ClPlayerManager;
+use winplayer_lib::playermanager::PlayerManager;
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
@@ -38,7 +38,10 @@ fn main() {
             switch_to_workspace,
             komorebi_init_event_listener,
             set_komorebi_offset,
-            get_player_status
+            get_player_status,
+            next,
+            play_pause,
+            previous
         ])
         .system_tray(system_tray)
         .on_system_tray_event(|app, event| match event {

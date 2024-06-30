@@ -8,7 +8,6 @@ use std::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    time::Duration,
 };
 pub mod constants;
 pub mod flags;
@@ -21,7 +20,7 @@ use tauri::{
     AppHandle, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
     SystemTrayMenuItem,
 };
-use tokio::sync::{Mutex, Notify};
+use tokio::sync::Mutex;
 static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
 use WinPlayer_Rust::clplayermanager::ClPlayerManager;
 use WinPlayer_Rust::playermanager::PlayerManager;
@@ -74,7 +73,7 @@ async fn get_player_status(app_handle: AppHandle) -> Result<(), ()> {
         tokio::spawn(async move {
             let player_manager: Arc<Mutex<PlayerManager>> =
                 Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
-            let mut cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
+            let cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
 
             // Start the manager loop
             // start_manager_loop(cl_player_manager, &app_handle).await;

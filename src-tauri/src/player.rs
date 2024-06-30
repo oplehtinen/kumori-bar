@@ -1,15 +1,8 @@
-use ::std::sync::Arc;
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use serde_json::Value;
 use tauri::{AppHandle, Manager};
-use tokio::sync::{Mutex, Notify};
-use tokio::time::timeout;
 use WinPlayer_Rust::clplayer::ClPlayer;
 use WinPlayer_Rust::clplayermanager::ClPlayerManager;
-use WinPlayer_Rust::player;
-use WinPlayer_Rust::util::get_session_player_name;
 #[derive(Serialize, Deserialize)]
 pub struct EvArtData {
     pub data: Vec<u8>,
@@ -31,9 +24,6 @@ pub async fn poll_manager_and_player_concurrently(
     mut manager: ClPlayerManager,
     app_handle: &AppHandle,
 ) {
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let notify = Arc::new(Notify::new());
-    let stopped = Arc::new(AtomicBool::new(true));
     loop {
         println!("loop start");
         // Step 1: Determine the active session
@@ -113,49 +103,6 @@ pub async fn poll_manager_and_player_concurrently(
             //tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             println!("loop end");
             },
-        }
-    }
-}
-
-pub async fn start_player_loop(
-    mut player: ClPlayer,
-    stop_flag: Arc<AtomicBool>,
-    notify: Arc<Notify>,
-    stopped: &Arc<AtomicBool>,
-    app_handle: &AppHandle,
-) {
-    loop {
-        println!("looping player");
-        if stop_flag.load(Ordering::SeqCst) {
-            println!("Stopping player loop");
-            stopped.store(true, Ordering::SeqCst); // Signal that the loop has stopped
-            notify.notify_one(); // Notify waiting tasks
-            break;
-        }
-        notify.notify_one();
-        notify.notified().await;
-
-        let player_evt: String = timeout(Duration::from_secs(2), player.poll_next_event())
-            .await
-            .unwrap_or_else(|_| String::new());
-        match player_evt.as_str() {
-            "PlaybackInfoChanged" => {
-                println!("Playback info changed");
-                let _ = update_metadata(&player, app_handle).await;
-                //println!("{:?}", status);
-            }
-            "MediaPropertiesChanged" => {
-                println!("Media properties changed");
-                let _ = update_metadata(&player, app_handle).await;
-                //println!("{:?}", status);
-            }
-            "TimelinePropertiesChanged" => {
-                println!("Timeline properties changed");
-                let _ = update_metadata(&player, app_handle).await;
-                /* let pos = player.get_position(false).await;
-                println!("{:?}", pos); */
-            }
-            _ => {}
         }
     }
 }

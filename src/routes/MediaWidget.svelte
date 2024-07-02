@@ -104,7 +104,7 @@
 					{/if}
 				</div>
 			</div>
-			<div class="text-lg">
+			<div class="text-lg truncate">
 				{#if processing}
 					<LoadingIcon />
 				{:else}

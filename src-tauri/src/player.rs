@@ -72,6 +72,7 @@ pub async fn poll_manager_and_player_concurrently(
             tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             continue;
         }
+        manager.update_sessions(None).await;
         let aumid = manager
             .figure_out_active_session()
             .await
@@ -134,7 +135,7 @@ pub async fn poll_manager_and_player_concurrently(
                 }
                 "Timeout" => {
                     println!("Timeout");
-                   // update_metadata(&player, app_handle, aumid_clone).await;
+                    update_metadata(&player, app_handle, aumid_clone).await;
                 }
                 _ => {
                     println!("Unhandled event: {}", player_result);
@@ -143,7 +144,7 @@ pub async fn poll_manager_and_player_concurrently(
             }
 
             // Optional: Add a delay to prevent the loop from running too frequently
-            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
             println!("loop end");
             },
         }
@@ -166,13 +167,21 @@ fn metadata_to_json(metadata: winplayer_lib::cltypes::ClMetadata, aumid: String)
         length: metadata.length,
         title: metadata.title,
     };
-    let json = serde_json::to_value(&payload).unwrap();
+    let json = match serde_json::to_value(&payload) {
+        Ok(value) => value,
+        Err(e) => {
+            // Log the error or handle it as needed
+            eprintln!("Error serializing payload: {}", e); // Example of logging the error to stderr
+            serde_json::Value::Null
+        }
+    };
     return json;
 }
 async fn update_metadata(player: &ClPlayer, app_handle: &AppHandle, aumid: String) {
     println!("Updating metadata");
     let status = player.get_status().await;
     let metadata = status.metadata.unwrap();
+    println!("Metadata: {:?}", metadata.title);
     let payload = metadata_to_json(metadata, aumid);
     let _ = app_handle.emit_all("player_status", payload);
 }

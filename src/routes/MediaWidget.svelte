@@ -19,16 +19,24 @@
 			.catch((err) => {
 				console.error(err);
 			});
+		listen('song_change', (event: any) => {
+			console.log(event);
+			processing = false;
+		});
 		listen('player_status', (event: any) => {
 			console.log(event);
-
+			console.log(metadata);
 			if (
 				!event.payload ||
 				(metadata != undefined &&
 					event.payload.title == metadata.title &&
-					event.payload.playing === metadata.playing)
+					event.payload.artist == metadata.artist &&
+					metadata.playing === event.payload.playing)
+				/*  ||
+				(metadata != undefined && event.payload.playing === metadata.playing) */
 			) {
 				console.log('returning');
+				//processing = false;
 				return;
 			}
 			// process the album art to an image
@@ -38,7 +46,6 @@
 			let url = URL.createObjectURL(albumArt);
 			metadata = event.payload;
 			metadata.albumArt = url;
-			console.log(metadata);
 		});
 	});
 	let controls = false;
@@ -65,7 +72,7 @@
 				console.error(err);
 			});
 	};
-	$: metadata, (processing = false);
+	/* $: metadata, (processing = false); */
 </script>
 
 {#if metadata}

@@ -12,12 +12,12 @@ use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackSt
 use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EvArtData {
     pub data: Vec<u8>,
     pub mimetype: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EvMetadata {
     pub album: Option<String>,
     pub album_artist: Option<String>,
@@ -64,6 +64,7 @@ pub async fn poll_manager_and_player_concurrently(
     let throttle = Arc::new(Mutex::new(Throttle::new(tokio::time::Duration::from_secs(
         1,
     ))));
+    let mut last_metadata: Option<EvMetadata> = None;
     loop {
         println!("loop start");
         // Step 1: Determine the active session
@@ -101,15 +102,15 @@ pub async fn poll_manager_and_player_concurrently(
                 match manager_result.as_str() {
                     "ActiveSessionChanged" => {
                         println!("Active session changed");
-                        update_metadata(&player, app_handle, aumid_clone).await;
+                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "SystemSessionChanged" => {
                         println!("System session changed");
-                        update_metadata(&player, app_handle, aumid_clone).await;
+                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "SessionsChanged" => {
                         println!("Sessions changed");
-                        update_metadata(&player, app_handle, aumid_clone).await;
+                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "Timeout" => {
                         println!("Timeout");
@@ -126,19 +127,19 @@ pub async fn poll_manager_and_player_concurrently(
             match player_result.as_str() {
                 "PlaybackInfoChanged" => {
                     println!("Playback info changed");
-                    update_metadata(&player, app_handle, aumid_clone).await;
+                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "MediaPropertiesChanged" => {
                     println!("Media properties changed");
-                    update_metadata(&player, app_handle, aumid_clone).await;
+                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "TimelinePropertiesChanged" => {
                     println!("Timeline properties changed");
-                    update_metadata(&player, app_handle, aumid_clone).await;
+                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "Timeout" => {
                     println!("Timeout");
-                    update_metadata(&player, app_handle, aumid_clone).await;
+                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 _ => {
                     println!("Unhandled event: {}", player_result);
@@ -151,9 +152,15 @@ pub async fn poll_manager_and_player_concurrently(
             println!("loop end");
             },
         }
+        println!(
+            "last_metadata: {:?}",
+            last_metadata
+                .as_ref()
+                .map(|metadata| metadata.title.clone())
+                .unwrap_or_else(|| "None".to_string())
+        );
     }
 }
-
 fn metadata_to_json(metadata: EvMetadata) -> Value {
     let payload = metadata;
     let json = match serde_json::to_value(&payload) {
@@ -166,7 +173,13 @@ fn metadata_to_json(metadata: EvMetadata) -> Value {
     };
     return json;
 }
-async fn update_metadata(player: &ClPlayer, app_handle: &AppHandle, aumid: String) {
+
+async fn update_metadata(
+    player: &ClPlayer,
+    app_handle: &AppHandle,
+    aumid: String,
+    last_metadata: &mut Option<EvMetadata>,
+) {
     println!("Updating metadata");
     let status = player.get_status().await;
     let metadata = status.metadata.unwrap();
@@ -192,9 +205,25 @@ async fn update_metadata(player: &ClPlayer, app_handle: &AppHandle, aumid: Strin
     } else {
         ev_metadata.playing = false;
     }
+    if let Some(last_metadata) = last_metadata {
+        if *last_metadata != ev_metadata {
+            println!("Metadata has changed");
+            *last_metadata = ev_metadata.clone();
+            let payload = metadata_to_json(ev_metadata);
+
+            let _ = app_handle.emit_all("song_change", true);
+            let _ = app_handle.emit_all("player_status", payload);
+        } else {
+            println!("Metadata has not changed");
+        }
+    } else {
+        println!("No last_metadata to compare, setting new value");
+        *last_metadata = Some(ev_metadata.clone());
+        let payload = metadata_to_json(ev_metadata);
+        let _ = app_handle.emit_all("player_status", payload);
+    }
+
     println!("Metadata: {:?}", metadata.title);
-    let payload = metadata_to_json(ev_metadata);
-    let _ = app_handle.emit_all("player_status", payload);
 }
 
 async fn get_player_and_manager(aumid: String) -> Result<(ClPlayer, ClPlayerManager), ()> {
@@ -226,8 +255,9 @@ async fn player_command<'a>(
     let result = command(Arc::clone(&player)).await;
     if result {
         let player_lock = player.lock().await;
-        update_metadata(&*player_lock, &app_handle, aumid.to_owned()).await;
         manager.update_sessions(None).await;
+        println!("updating metadata because of a command");
+        update_metadata(&*player_lock, &app_handle, aumid.to_owned(), &mut None).await;
         true
     } else {
         eprintln!("Failed to execute command");

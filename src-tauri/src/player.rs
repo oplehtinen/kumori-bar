@@ -8,6 +8,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
+use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
 use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
@@ -28,6 +29,8 @@ pub struct EvMetadata {
     pub player_aumid: String,
     pub length: f64,
     pub title: String,
+    pub playing: bool,
+    aumid: String,
 }
 struct Throttle {
     last_call: Instant,
@@ -151,22 +154,8 @@ pub async fn poll_manager_and_player_concurrently(
     }
 }
 
-fn metadata_to_json(metadata: winplayer_lib::cltypes::ClMetadata, aumid: String) -> Value {
-    let payload = EvMetadata {
-        album: metadata.album,
-        album_artist: metadata.album_artist,
-        album_artists: metadata.album_artists,
-        artist: metadata.artist,
-        artists: metadata.artists,
-        art_data: metadata.art_data.map(|art_data| EvArtData {
-            data: art_data.data,
-            mimetype: art_data.mimetype,
-        }),
-        player_aumid: aumid,
-        id: metadata.id,
-        length: metadata.length,
-        title: metadata.title,
-    };
+fn metadata_to_json(metadata: EvMetadata) -> Value {
+    let payload = metadata;
     let json = match serde_json::to_value(&payload) {
         Ok(value) => value,
         Err(e) => {
@@ -181,8 +170,30 @@ async fn update_metadata(player: &ClPlayer, app_handle: &AppHandle, aumid: Strin
     println!("Updating metadata");
     let status = player.get_status().await;
     let metadata = status.metadata.unwrap();
+    let mut ev_metadata = EvMetadata {
+        album: metadata.album.clone(),
+        album_artist: metadata.album_artist.clone(),
+        album_artists: metadata.album_artists.clone(),
+        artist: metadata.artist.clone(),
+        artists: metadata.artists.clone(),
+        art_data: metadata.art_data.map(|art_data| EvArtData {
+            data: art_data.data,
+            mimetype: art_data.mimetype,
+        }),
+        playing: false,
+        player_aumid: aumid.clone(),
+        id: metadata.id.clone(),
+        aumid,
+        length: metadata.length,
+        title: metadata.title.clone(),
+    };
+    if status.status == GlobalSystemMediaTransportControlsSessionPlaybackStatus(4) {
+        ev_metadata.playing = true;
+    } else {
+        ev_metadata.playing = false;
+    }
     println!("Metadata: {:?}", metadata.title);
-    let payload = metadata_to_json(metadata, aumid);
+    let payload = metadata_to_json(ev_metadata);
     let _ = app_handle.emit_all("player_status", payload);
 }
 

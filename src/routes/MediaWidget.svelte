@@ -7,6 +7,7 @@
 	import NextIcon from './Icons/NextIcon.svelte';
 	import { hide } from '@tauri-apps/api/app';
 	import LoadingIcon from './Icons/LoadingIcon.svelte';
+	import PlayIcon from './Icons/PlayIcon.svelte';
 	let metadata: any;
 	let processing = false;
 	onMount(async () => {
@@ -20,8 +21,14 @@
 			});
 		listen('player_status', (event: any) => {
 			console.log(event);
-			console.log(metadata);
-			if (!event.payload || (metadata != undefined && event.payload.artist == metadata.artist)) {
+
+			if (
+				!event.payload ||
+				(metadata != undefined &&
+					event.payload.title == metadata.title &&
+					event.payload.playing === metadata.playing)
+			) {
+				console.log('returning');
 				return;
 			}
 			// process the album art to an image
@@ -31,6 +38,7 @@
 			let url = URL.createObjectURL(albumArt);
 			metadata = event.payload;
 			metadata.albumArt = url;
+			console.log(metadata);
 		});
 	});
 	let controls = false;
@@ -82,7 +90,10 @@
 				class="btn btn-square btn-outline"
 				on:click={() => controlCmd('play_pause', metadata.player_aumid)}
 			>
-				<PauseIcon></PauseIcon>
+				{#if metadata.playing}
+					<PauseIcon></PauseIcon>
+				{:else}<PlayIcon></PlayIcon>
+				{/if}
 			</button>
 			<button
 				class="btn btn-square btn-outline"

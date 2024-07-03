@@ -15,10 +15,14 @@ rust-version = "1.60"
 tauri-build = { version = "1.5.2", features = [] }
 
 [dependencies]
+winplayer_lib = { path = "src/winplayer"}
+chrono = "0.4.28"
+tokio = { version = "1", features = ["full"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.6.5", features = [ "system-tray", "window-all", "devtools"] }
 log = "0.4.17"
+
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.
 # If you use cargo directly instead of tauri's cli you can use this feature flag to switch between tauri's `dev` and `build` modes.
@@ -28,9 +32,8 @@ custom-protocol = [ "tauri/custom-protocol" ]
 version = "0.44.0"
 features = [
     "Win32_Foundation",
-    "Win32_Security",
     "Win32_System_Pipes",
     "Win32_System_IO",
     "Win32_Storage_FileSystem",
-
+    "Win32_Security",
 ]

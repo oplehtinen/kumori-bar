@@ -1,0 +1,3 @@
+[submodule "src-tauri/src/winplayer"]
+	path = src-tauri/src/winplayer
+	url = https://github.com/oplehtinen/WinPlayer-Rust

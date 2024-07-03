@@ -4,6 +4,8 @@
 	import { onMount } from 'svelte';
 	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
 	import { invoke } from '@tauri-apps/api';
+	import { listen } from '@tauri-apps/api/event';
+	import MediaWidget from './MediaWidget.svelte';
 	const barHeight = 100;
 	const appWindow = new WindowManager('main');
 	onMount(async () => {
@@ -27,8 +29,10 @@
 	};
 </script>
 
-<div class="navbar flex-grow-0 overflow-hidden text-white bg-transparent max-h-2 h-full}">
-	<div class="flex-1">
+<div
+	class="navbar flex-grow-0 align-middle justify-between my-2 overflow-hidden text-white bg-transparent max-h-2 h-full}"
+>
+	<div class="basis-1/3">
 		<button class="btn btn-ghost text-xl"
 			><svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -46,8 +50,10 @@
 			</svg>
 		</button>
 	</div>
-	<div class="flex-grow gap-2">
+	<div class="basis-1/3 justify-center gap-x-2">
 		<WorkspaceWidget></WorkspaceWidget>
 	</div>
-	<div class="flex-none">Placeholder</div>
+	<div class="basis-1/3 justify-end">
+		<MediaWidget></MediaWidget>
+	</div>
 </div>

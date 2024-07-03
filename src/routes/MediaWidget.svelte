@@ -9,6 +9,7 @@
 	import LoadingIcon from './Icons/LoadingIcon.svelte';
 	import PlayIcon from './Icons/PlayIcon.svelte';
 	let metadata: any;
+	let newMetadata: any;
 	let processing = false;
 	onMount(async () => {
 		invoke('get_player_status')
@@ -21,31 +22,31 @@
 			});
 		listen('song_change', (event: any) => {
 			console.log(event);
-			processing = false;
+			metadata = undefined;
+			metadata = newMetadata;
+			// wait 100ms
+			setTimeout(() => {
+				processing = false;
+			}, 100);
 		});
 		listen('player_status', (event: any) => {
 			console.log(event);
 			console.log(metadata);
-			if (
-				!event.payload ||
-				(metadata != undefined &&
-					event.payload.title == metadata.title &&
-					event.payload.artist == metadata.artist &&
-					metadata.playing === event.payload.playing)
-				/*  ||
-				(metadata != undefined && event.payload.playing === metadata.playing) */
-			) {
-				console.log('returning');
-				//processing = false;
-				return;
-			}
+
 			// process the album art to an image
 			let albumArtData = event.payload.art_data.data;
 			let mimetype = event.payload.art_data.mimetype;
 			let albumArt = new Blob([new Uint8Array(albumArtData)], { type: mimetype });
 			let url = URL.createObjectURL(albumArt);
-			metadata = event.payload;
-			metadata.albumArt = url;
+			newMetadata = event.payload;
+			newMetadata.albumArt = url;
+			if (
+				metadata == undefined ||
+				metadata.title != newMetadata.title ||
+				metadata.playing != newMetadata.playing
+			) {
+				metadata = newMetadata;
+			}
 		});
 	});
 	let controls = false;
@@ -60,6 +61,8 @@
 	const controlCmd = (cmd: string, aumid: string) => {
 		if (cmd !== 'play_pause') {
 			processing = true;
+		} else {
+			metadata.playing = !metadata.playing;
 		}
 
 		invoke(cmd, {

@@ -15,15 +15,17 @@ mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
-use player::{next, play_pause, poll_manager_and_player_concurrently, previous};
+use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
 use tauri::{
-    AppHandle, CustomMenuItem, Manager, SystemTray, SystemTrayEvent, SystemTrayMenu,
+    AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent, SystemTrayMenu,
     SystemTrayMenuItem,
 };
 use tokio::sync::Mutex;
 static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
+#[derive(Default)]
+struct LastMetadata(Arc<Mutex<Option<EvMetadata>>>);
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
     let hide = CustomMenuItem::new("hide".to_string(), "Hide");
@@ -33,6 +35,7 @@ fn main() {
         .add_item(hide);
     let system_tray = SystemTray::new().with_menu(tray_menu);
     tauri::Builder::default()
+        .manage(LastMetadata::default())
         .invoke_handler(tauri::generate_handler![
             get_komorebi_status,
             switch_to_workspace,
@@ -67,12 +70,16 @@ fn set_komorebi_offset(offset: &str) {
 }
 
 #[tauri::command]
-async fn get_player_status(app_handle: AppHandle) -> Result<(), ()> {
+async fn get_player_status<'a>(
+    app_handle: AppHandle,
+    state: State<'a, LastMetadata>,
+) -> Result<(), ()> {
     // Check if the manager loop is already running
     if MANAGER_LOOP_RUNNING
         .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
         .is_ok()
     {
+        let metadata_clone = state.0.clone();
         tokio::spawn(async move {
             let player_manager: Arc<Mutex<PlayerManager>> =
                 Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
@@ -80,7 +87,8 @@ async fn get_player_status(app_handle: AppHandle) -> Result<(), ()> {
 
             // Start the manager loop
             // start_manager_loop(cl_player_manager, &app_handle).await;
-            poll_manager_and_player_concurrently(cl_player_manager, &app_handle).await;
+            poll_manager_and_player_concurrently(cl_player_manager, &app_handle, metadata_clone)
+                .await;
 
             // After the loop completes, reset the flag
             MANAGER_LOOP_RUNNING.store(false, Ordering::SeqCst);

@@ -5,13 +5,15 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
 use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
 use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
+
+use crate::LastMetadata;
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EvArtData {
     pub data: Vec<u8>,
@@ -56,15 +58,19 @@ impl Throttle {
         }
     }
 }
-pub async fn poll_manager_and_player_concurrently(
+pub async fn poll_manager_and_player_concurrently<'a>(
     mut manager: ClPlayerManager,
     app_handle: &AppHandle,
+    state: Arc<tauri::async_runtime::Mutex<std::option::Option<EvMetadata>>>,
 ) {
+    // get the state of LastMetadata
+    let state = state.lock().await;
+    let mut last_metadata = state.clone();
     manager.update_sessions(None).await;
     let throttle = Arc::new(Mutex::new(Throttle::new(tokio::time::Duration::from_secs(
         1,
     ))));
-    let mut last_metadata: Option<EvMetadata> = None;
+    //let mut last_metadata: Option<EvMetadata> = None;
     loop {
         println!("loop start");
         // Step 1: Determine the active session
@@ -135,6 +141,8 @@ pub async fn poll_manager_and_player_concurrently(
                 }
                 "TimelinePropertiesChanged" => {
                     println!("Timeline properties changed");
+
+
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "Timeout" => {
@@ -181,6 +189,7 @@ async fn update_metadata(
     last_metadata: &mut Option<EvMetadata>,
 ) {
     println!("Updating metadata");
+    tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
     let status = player.get_status().await;
     let metadata = status.metadata.unwrap();
     let mut ev_metadata = EvMetadata {
@@ -210,16 +219,42 @@ async fn update_metadata(
             println!("Metadata has changed");
             *last_metadata = ev_metadata.clone();
             let payload = metadata_to_json(ev_metadata);
-
+            println!("sending song as {:?}", payload.get("title").unwrap());
             let _ = app_handle.emit_all("song_change", true);
             let _ = app_handle.emit_all("player_status", payload);
         } else {
             println!("Metadata has not changed");
+            println!("No last_metadata to compare, setting new value");
+            *last_metadata = ev_metadata.clone();
+            let payload = metadata_to_json(ev_metadata);
+            let cur_postion = player.get_position(true).await;
+            if let Some(position) = cur_postion {
+                let seek_percentage = position.how_much / last_metadata.length;
+                println!("Seek percentage: {}", seek_percentage);
+                if seek_percentage < 0.01 {
+                    println!("Song has started");
+                    tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+                    let _ = app_handle.emit_all("song_change", true);
+                }
+            }
+
+            let _ = app_handle.emit_all("player_status", payload);
         }
     } else {
         println!("No last_metadata to compare, setting new value");
         *last_metadata = Some(ev_metadata.clone());
         let payload = metadata_to_json(ev_metadata);
+        let cur_postion = player.get_position(true).await;
+        if let Some(position) = cur_postion {
+            let seek_percentage = position.how_much / last_metadata.as_ref().unwrap().length;
+            println!("Seek percentage: {}", seek_percentage);
+            if seek_percentage < 0.01 {
+                println!("Song has started");
+                tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+                let _ = app_handle.emit_all("song_change", true);
+            }
+        }
+
         let _ = app_handle.emit_all("player_status", payload);
     }
 
@@ -244,55 +279,88 @@ async fn get_player_and_manager(aumid: String) -> Result<(ClPlayer, ClPlayerMana
 
 async fn player_command<'a>(
     app_handle: AppHandle,
-    aumid: &'a str,
+    aumid: String,
     command: impl FnOnce(Arc<Mutex<ClPlayer>>) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>>,
+    state: State<'a, LastMetadata>,
 ) -> bool {
     let (player, mut manager) = match get_player_and_manager(aumid.to_string()).await {
         Ok((player, manager)) => (Arc::new(Mutex::new(player)), manager),
         Err(_) => return false,
     };
+    println!("player_command");
 
     let result = command(Arc::clone(&player)).await;
+    println!("player_command result: {:?}", result);
+    let state = state.0.lock().await;
+    let last_metadata: &mut Option<EvMetadata> = &mut state.clone();
     if result {
+        println!("Command executed successfully");
         let player_lock = player.lock().await;
         manager.update_sessions(None).await;
         println!("updating metadata because of a command");
-        update_metadata(&*player_lock, &app_handle, aumid.to_owned(), &mut None).await;
+        update_metadata(&*player_lock, &app_handle, aumid, last_metadata).await;
         true
     } else {
         eprintln!("Failed to execute command");
         false
     }
+    // The function body was missing, adding a closing brace to complete the function
 }
 
 #[tauri::command]
-pub async fn next(app_handle: AppHandle, aumid: String) -> bool {
-    println!("TRYING TO PLAY NEXT");
-    player_command(app_handle, &aumid, |player_arc_mutex| {
-        Box::pin(async move {
-            let player = player_arc_mutex.lock().await;
-            player.next().await
-        })
-    })
-    .await
+pub async fn next(
+    app_handle: AppHandle,
+    aumid: String,
+    state: State<'_, LastMetadata>,
+) -> Result<bool, ()> {
+    Ok(player_command(
+        app_handle,
+        aumid,
+        |player_arc_mutex| {
+            Box::pin(async move {
+                let player = player_arc_mutex.lock().await;
+                player.next().await
+            })
+        },
+        state,
+    )
+    .await)
 }
 #[tauri::command]
-pub async fn play_pause(app_handle: AppHandle, aumid: String) -> bool {
-    player_command(app_handle, &aumid, |player_arc_mutex| {
-        Box::pin(async move {
-            let player = player_arc_mutex.lock().await;
-            player.play_pause().await
-        })
-    })
-    .await
+pub async fn play_pause(
+    app_handle: AppHandle,
+    aumid: String,
+    state: State<'_, LastMetadata>,
+) -> Result<bool, ()> {
+    Ok(player_command(
+        app_handle,
+        aumid,
+        |player_arc_mutex| {
+            Box::pin(async move {
+                let player = player_arc_mutex.lock().await;
+                player.play_pause().await
+            })
+        },
+        state,
+    )
+    .await)
 }
 #[tauri::command]
-pub async fn previous(app_handle: AppHandle, aumid: String) -> bool {
-    player_command(app_handle, &aumid, |player_arc_mutex| {
-        Box::pin(async move {
-            let player = player_arc_mutex.lock().await;
-            player.previous().await
-        })
-    })
-    .await
+pub async fn previous(
+    app_handle: AppHandle,
+    aumid: String,
+    state: State<'_, LastMetadata>,
+) -> Result<bool, ()> {
+    Ok(player_command(
+        app_handle,
+        aumid,
+        |player_arc_mutex| {
+            Box::pin(async move {
+                let player = player_arc_mutex.lock().await;
+                player.previous().await
+            })
+        },
+        state,
+    )
+    .await)
 }

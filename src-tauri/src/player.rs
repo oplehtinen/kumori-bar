@@ -225,7 +225,11 @@ async fn update_metadata(
             println!("Metadata has changed");
             *last_metadata = ev_metadata.clone();
             let payload = metadata_to_json(ev_metadata);
-            println!("sending song as {:?}", payload.get("title").unwrap());
+            let title = payload
+                .get("title")
+                .cloned()
+                .unwrap_or_else(|| Value::from("None"));
+            println!("sending song as {:?}", title);
             let _ = app_handle.emit_all("song_change", true);
             let _ = app_handle.emit_all("player_status", payload);
         } else {
@@ -252,12 +256,16 @@ async fn update_metadata(
         let payload = metadata_to_json(ev_metadata);
         let cur_postion = player.get_position(true).await;
         if let Some(position) = cur_postion {
-            let seek_percentage = position.how_much / last_metadata.as_ref().unwrap().length;
-            println!("Seek percentage: {}", seek_percentage);
-            if seek_percentage < 0.01 {
-                println!("Song has started");
-                tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-                let _ = app_handle.emit_all("song_change", true);
+            if let Some(last_metadata) = last_metadata.as_ref() {
+                let seek_percentage = position.how_much / last_metadata.length;
+                println!("Seek percentage: {}", seek_percentage);
+                if seek_percentage < 0.01 {
+                    println!("Song has started");
+                    tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
+                    let _ = app_handle.emit_all("song_change", true);
+                }
+            } else {
+                eprintln!("Error: last_metadata is None");
             }
         }
 
@@ -268,8 +276,13 @@ async fn update_metadata(
 }
 
 async fn get_player_and_manager(aumid: String) -> Result<(ClPlayer, ClPlayerManager), ()> {
-    let player_manager: Arc<Mutex<PlayerManager>> =
-        Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
+    let player_manager: Arc<Mutex<PlayerManager>> = match PlayerManager::new().await {
+        Some(manager) => Arc::new(Mutex::new(manager)),
+        None => {
+            eprintln!("Failed to create PlayerManager");
+            return Err(());
+        }
+    };
     let mut cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
     cl_player_manager.update_sessions(None).await;
     println!("aumid: {:?}", aumid);

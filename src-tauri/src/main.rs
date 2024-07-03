@@ -28,11 +28,9 @@ use winplayer_lib::playermanager::PlayerManager;
 struct LastMetadata(Arc<Mutex<Option<EvMetadata>>>);
 fn main() {
     let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let hide = CustomMenuItem::new("hide".to_string(), "Hide");
     let tray_menu = SystemTrayMenu::new()
         .add_item(quit)
-        .add_native_item(SystemTrayMenuItem::Separator)
-        .add_item(hide);
+        .add_native_item(SystemTrayMenuItem::Separator);
     let system_tray = SystemTray::new().with_menu(tray_menu);
     tauri::Builder::default()
         .manage(LastMetadata::default())
@@ -51,10 +49,6 @@ fn main() {
             SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
                 "quit" => {
                     std::process::exit(0);
-                }
-                "hide" => {
-                    let window = app.get_window("main").unwrap();
-                    window.hide().unwrap();
                 }
                 _ => {}
             },
@@ -81,8 +75,12 @@ async fn get_player_status<'a>(
     {
         let metadata_clone = state.0.clone();
         tokio::spawn(async move {
-            let player_manager: Arc<Mutex<PlayerManager>> =
-                Arc::new(Mutex::new(PlayerManager::new().await.unwrap()));
+            let player_manager: Arc<Mutex<PlayerManager>> = Arc::new(Mutex::new(
+                PlayerManager::new().await.unwrap_or_else(|| {
+                    eprintln!("Failed to create PlayerManager");
+                    std::process::exit(1);
+                }),
+            ));
             let cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
 
             // Start the manager loop
@@ -103,7 +101,13 @@ async fn get_player_status<'a>(
 #[tauri::command]
 fn get_komorebi_status() -> String {
     let output: Output = execute_komorebi_command("state", &[]);
-    String::from_utf8(output.stdout).unwrap()
+    match String::from_utf8(output.stdout) {
+        Ok(result) => result,
+        Err(e) => {
+            eprintln!("Error converting output to string: {}", e);
+            String::new()
+        }
+    }
 }
 
 #[tauri::command]

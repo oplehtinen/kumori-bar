@@ -191,7 +191,13 @@ async fn update_metadata(
     println!("Updating metadata");
     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
     let status = player.get_status().await;
-    let metadata = status.metadata.unwrap();
+    let metadata = match status.metadata {
+        Some(metadata) => metadata,
+        None => {
+            eprintln!("Error: Metadata is None");
+            return;
+        }
+    };
     let mut ev_metadata = EvMetadata {
         album: metadata.album.clone(),
         album_artist: metadata.album_artist.clone(),

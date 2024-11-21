@@ -2,14 +2,18 @@
 A simple status bar, designed to be used with the [Komorebi tiling window manager](https://lgug2z.github.io/komorebi/index.html).
 
 > [!WARNING]  
-> Still WIP, use at your own risk.
+> Still very much WIP, use at your own risk. Currently the project very narrowly suits my own needs, at some point this might be more configurable and modular.
+
+> [!WARNING]  
+> The bar now includes an experimental media playback status/control widget. The [library](https://github.com/oplehtinen/WinPlayer-Rust) is kind of wonky, be ready to run into issues.
+> This is based on the [Windows Media Control APIs](https://learn.microsoft.com/en-us/uwp/api/windows.media.control?view=winrt-26100) for cross-player support, but working with it is a pain. If anyone has a better implementation in mind, please do share! 
 
 Thanks to developers of [Zebar](https://github.com/glzr-io/zebar) and [yasb](https://github.com/da-rth/yasb/tree/tauri-port) for making the navigation of the Komorebi api and Tauri much easier.
 
 ![preview](preview.png)
 
 ## Getting started / Download
-- Currently, you need to build from source.
+- Experimental [builds ](https://github.com/oplehtinen/kumori-bar/releases)are provided for convenience. Please bear in mind they are very much untested.
 
 ## Features
 

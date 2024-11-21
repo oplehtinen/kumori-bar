@@ -1,10 +1,10 @@
 [package]
 name = "kumori-bar"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Tauri App"
 authors = ["Olli-Pekka Lehtinen"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/oplehtinen/kumori-bar"
 default-run = "kumori-bar"
 edition = "2021"
 rust-version = "1.60"

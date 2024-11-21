@@ -33,6 +33,37 @@ fn main() {
         .add_native_item(SystemTrayMenuItem::Separator);
     let system_tray = SystemTray::new().with_menu(tray_menu);
     tauri::Builder::default()
+.setup(|app| {
+            let quit_p = PredefinedMenuItem::quit(app, Some("Quit"))?;
+            let menu = MenuBuilder::new(app).items(&[&quit_p]).build()?;
+
+            let _tray = TrayIconBuilder::new()
+                .menu(&menu)
+                .on_menu_event(move |_app, event| match event.id().as_ref() {
+                    "quit" => {
+                        println!("unhandled event {event:?}");
+                    }
+                    _ => {}
+                })
+                .icon(app.default_window_icon().unwrap().clone())
+                .build(app)?;
+
+            let Some(window) = app.get_webview_window("main") else {
+                return Ok(());
+            };
+            // let monitors = app.available_monitors();
+            let Ok(Some(monitor)) = app.primary_monitor() else {
+                return Ok(());
+            };
+            let size = monitor.size();
+            let monitor_width = size.width;
+            let new_size = PhysicalSize {
+                width: monitor_width,
+                height: 100,
+            };
+            let _ = window.set_size(new_size);
+            Ok(())
+        })
         .manage(LastMetadata::default())
         .invoke_handler(tauri::generate_handler![
             get_komorebi_status,

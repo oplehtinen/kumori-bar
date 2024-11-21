@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { listen } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
+	import { invoke } from '@tauri-apps/api/core';
 	import PrevIcon from './Icons/PrevIcon.svelte';
 	import PauseIcon from './Icons/PauseIcon.svelte';
 	import NextIcon from './Icons/NextIcon.svelte';

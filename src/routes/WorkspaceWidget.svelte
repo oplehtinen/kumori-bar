@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { listen } from '@tauri-apps/api/event';
-	import { invoke } from '@tauri-apps/api/tauri';
+	import { invoke } from '@tauri-apps/api/core';
 	import type { KomorebiMonitor, KomorebiStatus, KomorebiWorkspace } from '$lib/types';
 	let status: KomorebiStatus;
 	let monitors: KomorebiMonitor[] = [];

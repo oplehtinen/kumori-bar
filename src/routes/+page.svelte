@@ -2,31 +2,19 @@
 	import WorkspaceWidget from './WorkspaceWidget.svelte';
 
 	import { onMount } from 'svelte';
-	import { LogicalSize, WindowManager, currentMonitor } from '@tauri-apps/api/window';
-	import { invoke } from '@tauri-apps/api';
+	import { LogicalSize, currentMonitor, getCurrentWindow, Window } from '@tauri-apps/api/window';
+	import { Webview } from '@tauri-apps/api/webview';
+	import { invoke } from '@tauri-apps/api/core';
 	import { listen } from '@tauri-apps/api/event';
 	import MediaWidget from './MediaWidget.svelte';
+	import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 	const barHeight = 100;
-	const appWindow = new WindowManager('main');
-	onMount(async () => {
-		const monitor = await currentMonitor();
-		if (!monitor) {
-			return;
-		}
-		const screenWidth = monitor.size.width;
-		setWindowSize(appWindow, screenWidth, barHeight);
-	});
+
 	invoke('set_komorebi_offset', {
 		offset: (barHeight / 2 - 10).toString()
 	}).then((res) => {
 		console.log(res);
 	});
-	const setWindowSize = async (window: WindowManager, width: number, height: number) => {
-		const innerSize = await window.innerSize();
-		innerSize.width = width;
-		innerSize.height = height;
-		window.setSize(new LogicalSize(width, height));
-	};
 </script>
 
 <div

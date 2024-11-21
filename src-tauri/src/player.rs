@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
 use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
@@ -230,8 +230,8 @@ async fn update_metadata(
                 .cloned()
                 .unwrap_or_else(|| Value::from("None"));
             println!("sending song as {:?}", title);
-            let _ = app_handle.emit_all("song_change", true);
-            let _ = app_handle.emit_all("player_status", payload);
+            let _ = app_handle.emit("song_change", true);
+            let _ = app_handle.emit("player_status", payload);
         } else {
             println!("Metadata has not changed");
             println!("No last_metadata to compare, setting new value");
@@ -244,11 +244,11 @@ async fn update_metadata(
                 if seek_percentage < 0.01 {
                     println!("Song has started");
                     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-                    let _ = app_handle.emit_all("song_change", true);
+                    let _ = app_handle.emit("song_change", true);
                 }
             }
 
-            let _ = app_handle.emit_all("player_status", payload);
+            let _ = app_handle.emit("player_status", payload);
         }
     } else {
         println!("No last_metadata to compare, setting new value");
@@ -262,14 +262,14 @@ async fn update_metadata(
                 if seek_percentage < 0.01 {
                     println!("Song has started");
                     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-                    let _ = app_handle.emit_all("song_change", true);
+                    let _ = app_handle.emit("song_change", true);
                 }
             } else {
                 eprintln!("Error: last_metadata is None");
             }
         }
 
-        let _ = app_handle.emit_all("player_status", payload);
+        let _ = app_handle.emit("player_status", payload);
     }
 
     println!("Metadata: {:?}", metadata.title);

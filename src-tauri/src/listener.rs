@@ -9,7 +9,7 @@ use std::os::windows::process::CommandExt;
 use std::process::ExitStatus;
 use std::process::{Command, Stdio};
 use std::{ffi::c_void, sync::Once, thread, time::Duration};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter};
 use Win32::{
     Foundation::{HANDLE, INVALID_HANDLE_VALUE},
     Storage::FileSystem::{ReadFile, PIPE_ACCESS_DUPLEX},
@@ -113,7 +113,7 @@ fn poll_named_pipe(named_pipe: HANDLE, app_handle: &AppHandle) -> () {
                             }
                         };
 
-                    let _ = app_handle.emit_all("komorebi_status", payload);
+                    let _ = app_handle.emit("komorebi_status", payload);
                 }
             }
         }
@@ -167,13 +167,13 @@ fn komorebi_event_listener(app_handle: &AppHandle) -> () {
                     } else {
                         log::warn!("KomorebiEventListener: failed to connect named pipe. Disconnecting and trying again.");
                         disconnect_named_pipe(named_pipe);
-                        let _ = _app_handle.emit_all("KomorebiOffline", ());
+                        let _ = _app_handle.emit("KomorebiOffline", ());
                     }
                 });
 
                 thread::sleep(Duration::from_millis(500));
                 wait_until_subscribed(pipe_name);
-                let _ = app_handle.emit_all("KomorebiOnline", ());
+                let _ = app_handle.emit("KomorebiOnline", ());
                 pipe_thread.join().unwrap();
             }
         }

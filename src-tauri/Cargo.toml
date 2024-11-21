@@ -12,7 +12,7 @@ rust-version = "1.60"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.5.2", features = [] }
+tauri-build = { version = "2", features = [] }
 
 [dependencies]
 winplayer_lib = { path = "src/winplayer"}
@@ -20,7 +20,7 @@ chrono = "0.4.28"
 tokio = { version = "1", features = ["full"] }
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.6.5", features = [ "system-tray", "window-all", "devtools"] }
+tauri = { version = "2", features = [ "devtools", "tray-icon"] }
 log = "0.4.17"
 
 [features]

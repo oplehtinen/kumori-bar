@@ -17,8 +17,9 @@ use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
 use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
 use tauri::{
-    AppHandle, CustomMenuItem, Manager, State, SystemTray, SystemTrayEvent, SystemTrayMenu,
-    SystemTrayMenuItem,
+    menu::{MenuBuilder, PredefinedMenuItem},
+    tray::TrayIconBuilder,
+    AppHandle, Manager, PhysicalSize, State,
 };
 use tokio::sync::Mutex;
 static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
@@ -27,13 +28,8 @@ use winplayer_lib::playermanager::PlayerManager;
 #[derive(Default)]
 struct LastMetadata(Arc<Mutex<Option<EvMetadata>>>);
 fn main() {
-    let quit = CustomMenuItem::new("quit".to_string(), "Quit");
-    let tray_menu = SystemTrayMenu::new()
-        .add_item(quit)
-        .add_native_item(SystemTrayMenuItem::Separator);
-    let system_tray = SystemTray::new().with_menu(tray_menu);
     tauri::Builder::default()
-.setup(|app| {
+        .setup(|app| {
             let quit_p = PredefinedMenuItem::quit(app, Some("Quit"))?;
             let menu = MenuBuilder::new(app).items(&[&quit_p]).build()?;
 
@@ -75,16 +71,6 @@ fn main() {
             play_pause,
             previous
         ])
-        .system_tray(system_tray)
-        .on_system_tray_event(|app, event| match event {
-            SystemTrayEvent::MenuItemClick { id, .. } => match id.as_str() {
-                "quit" => {
-                    std::process::exit(0);
-                }
-                _ => {}
-            },
-            _ => {}
-        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

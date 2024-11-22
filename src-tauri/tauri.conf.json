@@ -61,9 +61,14 @@
         "contentProtected": false,
         "alwaysOnBottom": true,
         "hiddenTitle": false,
+        "dragDropEnabled": false,
         "fullscreen": false,
-        "height": 100,
-        "resizable": true,
+        "focus": false,
+        "height": 10,
+        "closable": false,
+        "minimizable": false,
+        "resizable": false,
+        "maximizable": false,
         "title": "kumori-bar",
         "width": 800,
         "x": 0,
@@ -73,7 +78,7 @@
         "alwaysOnTop": true,
         "skipTaskbar": true,
         "transparent": true,
-        "useHttpsScheme": true
+        "useHttpsScheme": false
       }
     ]
   }

@@ -59,6 +59,7 @@
     "windows": [
       {
         "contentProtected": false,
+        "alwaysOnBottom": true,
         "hiddenTitle": false,
         "fullscreen": false,
         "height": 100,

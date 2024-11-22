@@ -1,10 +1,10 @@
+use log::{error, info};
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-
-use serde::{Deserialize, Serialize};
-use serde_json::Value;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
@@ -72,7 +72,7 @@ pub async fn poll_manager_and_player_concurrently<'a>(
     ))));
     //let mut last_metadata: Option<EvMetadata> = None;
     loop {
-        println!("loop start");
+        info!("loop start");
         // Step 1: Determine the active session
         let should_call = {
             let mut throttle = throttle.lock().await;
@@ -88,17 +88,17 @@ pub async fn poll_manager_and_player_concurrently<'a>(
             .await
             .unwrap_or_else(|| "None".to_string());
         // Step 2: Retrieve the ClPlayer instance
-        println!("Active session set to: {:?}", aumid);
+        info!("Active session set to: {:?}", aumid);
         let aumid_clone = aumid.clone();
-        println!("getting player for aumid: {:?}", aumid_clone);
+        info!("getting player for aumid: {:?}", aumid_clone);
         let mut player = match manager.get_session(aumid).await {
             Some(player) => player,
             None => {
-                eprintln!("Failed to find player for aumid: {}", aumid_clone);
+                error!("Failed to find player for aumid: {}", aumid_clone);
                 continue; // Skip to the next iteration on error
             }
         };
-        println!("got player for aumid: {:?}", aumid_clone);
+        info!("got player for aumid: {:?}", aumid_clone);
         // Step 3: Concurrently poll the ClPlayerManager and ClPlayer
         let manager_poll = manager.poll_next_event(); // Assuming this is an async method
         let player_poll = player.poll_next_event(); // Assuming this is also an async method
@@ -107,23 +107,23 @@ pub async fn poll_manager_and_player_concurrently<'a>(
             manager_result = manager_poll => {
                 match manager_result.as_str() {
                     "ActiveSessionChanged" => {
-                        println!("Active session changed");
+                        info!("Active session changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "SystemSessionChanged" => {
-                        println!("System session changed");
+                        info!("System session changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "SessionsChanged" => {
-                        println!("Sessions changed");
+                        info!("Sessions changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                     }
                     "Timeout" => {
-                        println!("Timeout");
+                        info!("Timeout");
                        // update_metadata(&player, app_handle, aumid_clone).await;
                     }
                     _ => {
-                        println!("Unhandled event: {}", manager_result);
+                        info!("Unhandled event: {}", manager_result);
                         //update_metadata(&player, app_handle, aumid_clone).await;
                     }
                 }
@@ -132,35 +132,35 @@ pub async fn poll_manager_and_player_concurrently<'a>(
 
             match player_result.as_str() {
                 "PlaybackInfoChanged" => {
-                    println!("Playback info changed");
+                    info!("Playback info changed");
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "MediaPropertiesChanged" => {
-                    println!("Media properties changed");
+                    info!("Media properties changed");
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "TimelinePropertiesChanged" => {
-                    println!("Timeline properties changed");
+                    info!("Timeline properties changed");
 
 
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 "Timeout" => {
-                    println!("Timeout");
+                    info!("Timeout");
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata).await;
                 }
                 _ => {
-                    println!("Unhandled event: {}", player_result);
+                    info!("Unhandled event: {}", player_result);
                    // update_metadata(&player, app_handle, aumid_clone).await;
                 }
             }
 
             // Optional: Add a delay to prevent the loop from running too frequently
-            tokio::time::sleep(tokio::time::Duration::from_millis(2000)).await;
-            println!("loop end");
+            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            info!("loop end");
             },
         }
-        println!(
+        info!(
             "last_metadata: {:?}",
             last_metadata
                 .as_ref()
@@ -175,7 +175,7 @@ fn metadata_to_json(metadata: EvMetadata) -> Value {
         Ok(value) => value,
         Err(e) => {
             // Log the error or handle it as needed
-            eprintln!("Error serializing payload: {}", e); // Example of logging the error to stderr
+            error!("Error serializing payload: {}", e); // Example of logging the error to stderr
             serde_json::Value::Null
         }
     };
@@ -188,13 +188,13 @@ async fn update_metadata(
     aumid: String,
     last_metadata: &mut Option<EvMetadata>,
 ) {
-    println!("Updating metadata");
+    info!("Updating metadata");
     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
     let status = player.get_status().await;
     let metadata = match status.metadata {
         Some(metadata) => metadata,
         None => {
-            eprintln!("Error: Metadata is None");
+            error!("Error: Metadata is None");
             return;
         }
     };
@@ -222,27 +222,27 @@ async fn update_metadata(
     }
     if let Some(last_metadata) = last_metadata {
         if *last_metadata != ev_metadata {
-            println!("Metadata has changed");
-            *last_metadata = ev_metadata.clone();
-            let payload = metadata_to_json(ev_metadata);
+            info!("Last metadata found, metadata HAS changed");
+            let new_metadata = ev_metadata;
+            *last_metadata = new_metadata.clone();
+            let payload = metadata_to_json(new_metadata);
             let title = payload
                 .get("title")
                 .cloned()
                 .unwrap_or_else(|| Value::from("None"));
-            println!("sending song as {:?}", title);
+            info!("sending song as {:?}", title);
             let _ = app_handle.emit("song_change", true);
             let _ = app_handle.emit("player_status", payload);
         } else {
-            println!("Metadata has not changed");
-            println!("No last_metadata to compare, setting new value");
+            info!("Metadata has NOT changed");
             *last_metadata = ev_metadata.clone();
             let payload = metadata_to_json(ev_metadata);
             let cur_postion = player.get_position(true).await;
             if let Some(position) = cur_postion {
                 let seek_percentage = position.how_much / last_metadata.length;
-                println!("Seek percentage: {}", seek_percentage);
+                info!("Seek percentage: {}", seek_percentage);
                 if seek_percentage < 0.01 {
-                    println!("Song has started");
+                    info!("Song has started");
                     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
                     let _ = app_handle.emit("song_change", true);
                 }
@@ -251,45 +251,46 @@ async fn update_metadata(
             let _ = app_handle.emit("player_status", payload);
         }
     } else {
-        println!("No last_metadata to compare, setting new value");
-        *last_metadata = Some(ev_metadata.clone());
-        let payload = metadata_to_json(ev_metadata);
+        info!("No last_metadata to compare, setting new value");
+        let new_metadata = ev_metadata;
+        *last_metadata = Some(new_metadata.clone());
+        let payload = metadata_to_json(new_metadata);
         let cur_postion = player.get_position(true).await;
         if let Some(position) = cur_postion {
             if let Some(last_metadata) = last_metadata.as_ref() {
                 let seek_percentage = position.how_much / last_metadata.length;
-                println!("Seek percentage: {}", seek_percentage);
+                info!("Seek percentage: {}", seek_percentage);
                 if seek_percentage < 0.01 {
-                    println!("Song has started");
+                    info!("Song has started");
                     tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
                     let _ = app_handle.emit("song_change", true);
                 }
             } else {
-                eprintln!("Error: last_metadata is None");
+                error!("Error: last_metadata is None");
             }
         }
 
         let _ = app_handle.emit("player_status", payload);
     }
 
-    println!("Metadata: {:?}", metadata.title);
+    info!("Metadata: {:?}", metadata.title);
 }
 
 async fn get_player_and_manager(aumid: String) -> Result<(ClPlayer, ClPlayerManager), ()> {
     let player_manager: Arc<Mutex<PlayerManager>> = match PlayerManager::new().await {
         Some(manager) => Arc::new(Mutex::new(manager)),
         None => {
-            eprintln!("Failed to create PlayerManager");
+            error!("Failed to create PlayerManager");
             return Err(());
         }
     };
     let mut cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
     cl_player_manager.update_sessions(None).await;
-    println!("aumid: {:?}", aumid);
+    info!("aumid: {:?}", aumid);
     let player = match cl_player_manager.get_session(aumid).await {
         Some(player) => player,
         None => {
-            eprintln!("Failed to find player for aumid");
+            error!("Failed to find player for aumid");
             return Err(());
         }
     };
@@ -306,21 +307,21 @@ async fn player_command<'a>(
         Ok((player, manager)) => (Arc::new(Mutex::new(player)), manager),
         Err(_) => return false,
     };
-    println!("player_command");
+    info!("player_command");
 
     let result = command(Arc::clone(&player)).await;
-    println!("player_command result: {:?}", result);
+    info!("player_command result: {:?}", result);
     let state = state.0.lock().await;
     let last_metadata: &mut Option<EvMetadata> = &mut state.clone();
     if result {
-        println!("Command executed successfully");
+        info!("Command executed successfully");
         let player_lock = player.lock().await;
         manager.update_sessions(None).await;
-        println!("updating metadata because of a command");
+        info!("updating metadata because of a command");
         update_metadata(&*player_lock, &app_handle, aumid, last_metadata).await;
         true
     } else {
-        eprintln!("Failed to execute command");
+        error!("Failed to execute command");
         false
     }
     // The function body was missing, adding a closing brace to complete the function

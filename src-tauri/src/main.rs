@@ -15,6 +15,7 @@ mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
 use constants::KOMOREBI_CLI_EXE;
+use log::{error, info};
 use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
@@ -45,7 +46,7 @@ fn main() {
                 .menu(&menu)
                 .on_menu_event(move |_app, event| match event.id().as_ref() {
                     "quit" => {
-                        println!("unhandled event {event:?}");
+                        info!("unhandled event {event:?}");
                     }
                     _ => {}
                 })
@@ -109,7 +110,7 @@ async fn get_player_status<'a>(
         tokio::spawn(async move {
             let player_manager: Arc<Mutex<PlayerManager>> = Arc::new(Mutex::new(
                 PlayerManager::new().await.unwrap_or_else(|| {
-                    eprintln!("Failed to create PlayerManager");
+                    error!("Failed to create PlayerManager");
                     std::process::exit(1);
                 }),
             ));
@@ -124,7 +125,7 @@ async fn get_player_status<'a>(
             MANAGER_LOOP_RUNNING.store(false, Ordering::SeqCst);
         });
     } else {
-        println!("Manager loop is already running.");
+        info!("Manager loop is already running.");
     }
 
     Ok(())
@@ -136,7 +137,7 @@ fn get_komorebi_status() -> String {
     match String::from_utf8(output.stdout) {
         Ok(result) => result,
         Err(e) => {
-            eprintln!("Error converting output to string: {}", e);
+            error!("Error converting output to string: {}", e);
             String::new()
         }
     }
@@ -156,7 +157,7 @@ fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
     let mut cmd = Command::new(KOMOREBI_CLI_EXE);
     cmd.arg(command);
     for arg in args {
-        println!("{}", arg);
+        info!("{}", arg);
         cmd.arg(arg);
     }
     if !cfg!(debug_assertions) {

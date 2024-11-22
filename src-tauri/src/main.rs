@@ -22,7 +22,13 @@ use tauri::{
     AppHandle, Manager, PhysicalSize, State,
 };
 use tokio::sync::Mutex;
+use tokio::time::{sleep, Duration};
+
 static MANAGER_LOOP_RUNNING: AtomicBool = AtomicBool::new(false);
+use enigo::{
+    Direction::{Press, Release},
+    Enigo, Key, Keyboard, Settings,
+};
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
 #[derive(Default)]
@@ -69,7 +75,8 @@ fn main() {
             get_player_status,
             next,
             play_pause,
-            previous
+            previous,
+            simulate_windows_tab
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -152,4 +159,14 @@ fn execute_komorebi_command(command: &str, args: &[&str]) -> Output {
 
     let output = cmd.output();
     return output.expect("failed to execute process");
+}
+#[tauri::command]
+async fn simulate_windows_tab() {
+    sleep(Duration::from_millis(100)).await;
+    let mut enigo = Enigo::new(&Settings::default()).unwrap();
+    enigo.key(Key::Meta, Press).unwrap();
+    enigo.key(Key::Tab, Press).unwrap();
+    sleep(Duration::from_millis(100)).await;
+    enigo.key(Key::Meta, Release).unwrap();
+    enigo.key(Key::Tab, Release).unwrap();
 }

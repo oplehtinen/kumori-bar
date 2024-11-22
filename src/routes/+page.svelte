@@ -15,6 +15,9 @@
 	}).then((res) => {
 		console.log(res);
 	});
+	const winTabPress = () => {
+		invoke('simulate_windows_tab');
+	};
 </script>
 
 <svelte:window on:contextmenu|preventDefault />
@@ -22,7 +25,7 @@
 	class="navbar flex-grow-0 align-middle justify-between my-2 overflow-hidden text-white bg-transparent max-h-2 h-full}"
 >
 	<div class="basis-1/3">
-		<button class="btn btn-ghost text-xl"
+		<button class="btn btn-ghost text-xl" on:click={winTabPress}
 			><svg
 				xmlns="http://www.w3.org/2000/svg"
 				fill="none"

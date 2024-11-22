@@ -1,6 +1,6 @@
 [package]
 name = "kumori-bar"
-version = "0.2.0"
+version = "0.2.1"
 description = "A Tauri App"
 authors = ["Olli-Pekka Lehtinen"]
 license = "MIT"

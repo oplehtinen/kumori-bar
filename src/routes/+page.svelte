@@ -17,6 +17,7 @@
 	});
 </script>
 
+<svelte:window on:contextmenu|preventDefault />
 <div
 	class="navbar flex-grow-0 align-middle justify-between my-2 overflow-hidden text-white bg-transparent max-h-2 h-full}"
 >

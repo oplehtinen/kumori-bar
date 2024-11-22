@@ -235,8 +235,9 @@ async fn update_metadata(
             let _ = app_handle.emit("player_status", payload);
         } else {
             info!("Metadata has NOT changed");
-            *last_metadata = ev_metadata.clone();
-            let payload = metadata_to_json(ev_metadata);
+            let new_metadata = ev_metadata;
+            *last_metadata = new_metadata.clone();
+
             let cur_postion = player.get_position(true).await;
             if let Some(position) = cur_postion {
                 let seek_percentage = position.how_much / last_metadata.length;
@@ -248,7 +249,8 @@ async fn update_metadata(
                 }
             }
 
-            let _ = app_handle.emit("player_status", payload);
+            /*        let payload = metadata_to_json(ev_metadata);
+            let _ = app_handle.emit("player_status", payload); */
         }
     } else {
         info!("No last_metadata to compare, setting new value");

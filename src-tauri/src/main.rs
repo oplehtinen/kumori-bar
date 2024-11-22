@@ -34,7 +34,9 @@ use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
 #[derive(Default)]
 struct LastMetadata(Arc<Mutex<Option<EvMetadata>>>);
-fn main() {
+
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+async fn main() {
     #[cfg(debug_assertions)] // only enable instrumentation in development builds
     let devtools = tauri_plugin_devtools::init();
     let mut builder = tauri::Builder::default()

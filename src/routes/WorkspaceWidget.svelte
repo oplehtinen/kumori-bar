@@ -1,15 +1,18 @@
 <script lang="ts">
+	import { preventDefault, stopPropagation, trusted } from 'svelte/legacy';
+
 	import { onMount } from 'svelte';
 	import { listen } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/core';
 	import type { KomorebiMonitor, KomorebiStatus, KomorebiWorkspace } from '$lib/types';
-	let status: KomorebiStatus;
-	let monitors: KomorebiMonitor[] = [];
+	let status: KomorebiStatus | undefined = $state();
+	let monitors: KomorebiMonitor[] = $state([]);
 	let workspaces: KomorebiWorkspace[] = [];
 	let komorebiBusy = false;
 	onMount(async () => {
 		invoke('get_komorebi_status').then((res) => {
 			status = JSON.parse(res as string);
+			if (!status) return;
 			monitors = status.monitors.elements;
 			console.log(monitors);
 			// for each monitor, create a workspace
@@ -62,7 +65,7 @@
 			{#if workspace}
 				<button
 					class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-success' : ''}`}
-					on:click|preventDefault|stopPropagation|capture|trusted={() => openWorkspace(mIdx, wIdx)}
+					onclickcapture={trusted(stopPropagation(preventDefault(() => openWorkspace(mIdx, wIdx))))}
 					>{workspace.name ?? (wIdx + 1).toString()}</button
 				>
 			{/if}

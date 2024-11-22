@@ -8,9 +8,9 @@
 	import { hide } from '@tauri-apps/api/app';
 	import LoadingIcon from './Icons/LoadingIcon.svelte';
 	import PlayIcon from './Icons/PlayIcon.svelte';
-	let metadata: any;
+	let metadata: any = $state();
 	let newMetadata: any;
-	let processing = false;
+	let processing = $state(false);
 	onMount(async () => {
 		invoke('get_player_status')
 			.then((res) => {
@@ -49,7 +49,7 @@
 			}
 		});
 	});
-	let controls = false;
+	let controls = $state(false);
 	const showControls = () => {
 		controls = true;
 		console.log('showing controls');
@@ -80,8 +80,8 @@
 
 {#if metadata}
 	<div
-		on:mouseenter={showControls}
-		on:mouseleave={hideControls}
+		onmouseenter={showControls}
+		onmouseleave={hideControls}
 		role="banner"
 		aria-roledescription="button"
 	>
@@ -92,13 +92,13 @@
 		>
 			<button
 				class="btn btn-square btn-outline"
-				on:click={() => controlCmd('previous', metadata.player_aumid)}
+				onclick={() => controlCmd('previous', metadata.player_aumid)}
 			>
 				<PrevIcon></PrevIcon>
 			</button>
 			<button
 				class="btn btn-square btn-outline"
-				on:click={() => controlCmd('play_pause', metadata.player_aumid)}
+				onclick={() => controlCmd('play_pause', metadata.player_aumid)}
 			>
 				{#if metadata.playing}
 					<PauseIcon></PauseIcon>
@@ -107,7 +107,7 @@
 			</button>
 			<button
 				class="btn btn-square btn-outline"
-				on:click={() => controlCmd('next', metadata.player_aumid)}
+				onclick={() => controlCmd('next', metadata.player_aumid)}
 			>
 				<NextIcon></NextIcon>
 			</button>
@@ -119,7 +119,7 @@
 						<div class="skeleton h-8 w-8"></div>
 					{:else}
 						<div class="w-8 rounded-full">
-							<!-- svelte-ignore a11y-missing-attribute -->
+							<!-- svelte-ignore a11y_missing_attribute -->
 							<img class="img-sm" src={metadata.albumArt} />
 						</div>
 					{/if}

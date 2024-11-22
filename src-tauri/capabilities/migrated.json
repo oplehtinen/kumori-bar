@@ -37,8 +37,6 @@
     "core:window:allow-set-cursor-visible",
     "core:window:allow-set-cursor-icon",
     "core:window:allow-set-cursor-position",
-    "core:window:allow-set-ignore-cursor-events",
-    "core:window:allow-start-dragging",
-    "core:webview:allow-print"
+    "core:window:allow-set-ignore-cursor-events"
   ]
 }

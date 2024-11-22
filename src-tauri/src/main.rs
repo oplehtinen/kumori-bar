@@ -55,7 +55,7 @@ fn main() {
             let monitor_width = size.width;
             let new_size = PhysicalSize {
                 width: monitor_width,
-                height: 100,
+                height: 80,
             };
             let _ = window.set_size(new_size);
             Ok(())

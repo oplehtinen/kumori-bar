@@ -5,7 +5,6 @@
 	import PrevIcon from './Icons/PrevIcon.svelte';
 	import PauseIcon from './Icons/PauseIcon.svelte';
 	import NextIcon from './Icons/NextIcon.svelte';
-	import { hide } from '@tauri-apps/api/app';
 	import LoadingIcon from './Icons/LoadingIcon.svelte';
 	import PlayIcon from './Icons/PlayIcon.svelte';
 	let metadata: any = $state();
@@ -20,20 +19,9 @@
 			.catch((err) => {
 				console.error(err);
 			});
-		listen('song_change', (event: any) => {
-			console.log(event);
-			metadata = undefined;
-			metadata = newMetadata;
-			// wait 100ms
-			setTimeout(() => {
-				processing = false;
-			}, 100);
-		});
 		listen('player_status', (event: any) => {
 			console.log(event);
 			console.log(metadata);
-
-			// process the album art to an image
 			let albumArtData = event.payload.art_data.data;
 			let mimetype = event.payload.art_data.mimetype;
 			let albumArt = new Blob([new Uint8Array(albumArtData)], { type: mimetype });
@@ -46,6 +34,7 @@
 				metadata.playing != newMetadata.playing
 			) {
 				metadata = newMetadata;
+				processing = false;
 			}
 		});
 	});

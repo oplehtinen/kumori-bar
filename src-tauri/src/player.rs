@@ -4,8 +4,10 @@ use serde_json::Value;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Mutex;
+use tokio::time::Instant;
 use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
 use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
@@ -24,7 +26,7 @@ pub struct EvMetadata {
     pub album_artists: Option<Vec<String>>,
     pub artist: String,
     pub artists: Vec<String>,
-    pub art_data: Option<EvArtData>, // Ensure ClArtData also derives Serialize
+    pub art_data: Option<EvArtData>,
     pub id: Option<String>,
     pub player_aumid: String,
     pub length: f64,
@@ -32,27 +34,57 @@ pub struct EvMetadata {
     pub playing: bool,
     aumid: String,
 }
+struct Throttle {
+    last_call: Instant,
+    interval: Duration,
+}
 
+impl Throttle {
+    fn new(interval: Duration) -> Self {
+        Throttle {
+            last_call: Instant::now() - interval, // Initialize to allow immediate first call
+            interval,
+        }
+    }
+
+    async fn allow_call(&mut self) -> bool {
+        let now = Instant::now();
+        if now - self.last_call >= self.interval {
+            self.last_call = now;
+            true
+        } else {
+            false
+        }
+    }
+}
 pub async fn poll_manager_and_player_concurrently<'a>(
     mut manager: ClPlayerManager,
     app_handle: &AppHandle,
     state: Arc<tauri::async_runtime::Mutex<std::option::Option<EvMetadata>>>,
 ) {
+    let throttle = Arc::new(Mutex::new(Throttle::new(tokio::time::Duration::from_secs(
+        1,
+    ))));
     let mut last_metadata = {
         let state_guard = state.lock().await;
         state_guard.clone()
     };
     manager.update_sessions(None).await;
-    //let mut last_metadata: Option<EvMetadata> = None;
     loop {
         info!("loop start");
-
+        let should_call = {
+            let mut throttle = throttle.lock().await;
+            throttle.allow_call().await
+        };
+        if !should_call {
+            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            continue;
+        }
         manager.update_sessions(None).await;
         let aumid = manager
             .figure_out_active_session()
             .await
             .unwrap_or_else(|| "None".to_string());
-        // Step 2: Retrieve the ClPlayer instance
         info!("Active session set to: {:?}", aumid);
         let aumid_clone = aumid.clone();
         info!("getting player for aumid: {:?}", aumid_clone);
@@ -60,36 +92,36 @@ pub async fn poll_manager_and_player_concurrently<'a>(
             Some(player) => player,
             None => {
                 error!("Failed to find player for aumid: {}", aumid_clone);
-                continue; // Skip to the next iteration on error
+                continue;
             }
         };
         info!("got player for aumid: {:?}", aumid_clone);
-        // Step 3: Concurrently poll the ClPlayerManager and ClPlayer
-        let manager_poll = manager.poll_next_event(); // Assuming this is an async method
-        let player_poll = player.poll_next_event(); // Assuming this is also an async method
-                                                    // Use tokio::join! for concurrent execution
+        let manager_poll = manager.poll_next_event();
+        let player_poll = player.poll_next_event();
+
         tokio::select! {
             manager_result = manager_poll => {
                 match manager_result.as_str() {
                     "ActiveSessionChanged" => {
                         info!("Active session changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                        continue;
                     }
                     "SystemSessionChanged" => {
                         info!("System session changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                        continue;
                     }
                     "SessionsChanged" => {
                         info!("Sessions changed");
                         update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                        continue;
                     }
                     "Timeout" => {
                         info!("Timeout");
-                       // update_metadata(&player, app_handle, aumid_clone).await;
                     }
                     _ => {
                         info!("Unhandled event: {}", manager_result);
-                        //update_metadata(&player, app_handle, aumid_clone).await;
                     }
                 }
             },
@@ -99,29 +131,28 @@ pub async fn poll_manager_and_player_concurrently<'a>(
                 "PlaybackInfoChanged" => {
                     info!("Playback info changed");
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                    continue;
                 }
                 "MediaPropertiesChanged" => {
                     info!("Media properties changed");
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                    continue;
                 }
                 "TimelinePropertiesChanged" => {
                     info!("Timeline properties changed");
 
 
                     update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                    continue;
                 }
                 "Timeout" => {
                     info!("Timeout");
-                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
                 }
                 _ => {
                     info!("Unhandled event: {}", player_result);
-                   // update_metadata(&player, app_handle, aumid_clone).await;
                 }
             }
 
-            // Optional: Add a delay to prevent the loop from running too frequently
-            tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
             info!("loop end");
             },
@@ -140,8 +171,7 @@ fn metadata_to_json(metadata: EvMetadata) -> Value {
     let json = match serde_json::to_value(&payload) {
         Ok(value) => value,
         Err(e) => {
-            // Log the error or handle it as needed
-            error!("Error serializing payload: {}", e); // Example of logging the error to stderr
+            error!("Error serializing payload: {}", e);
             serde_json::Value::Null
         }
     };
@@ -203,26 +233,21 @@ async fn update_metadata(
                 .cloned()
                 .unwrap_or_else(|| Value::from("None"));
             info!("sending song as {:?}", title);
-            let _ = app_handle.emit("song_change", true);
             let _ = app_handle.emit("player_status", payload);
         } else {
             info!("Metadata has NOT changed");
             let new_metadata = ev_metadata;
             *last_metadata = new_metadata.clone();
-
+            let payload = metadata_to_json(new_metadata);
             let cur_postion = player.get_position(true).await;
             if let Some(position) = cur_postion {
                 let seek_percentage = position.how_much / last_metadata.length;
                 info!("Seek percentage: {}", seek_percentage);
                 if seek_percentage < 0.01 {
                     info!("Song has started");
-                    tokio::time::sleep(tokio::time::Duration::from_millis(400)).await;
-                    let _ = app_handle.emit("song_change", true);
+                    let _ = app_handle.emit("player_status", payload);
                 }
             }
-
-            /*        let payload = metadata_to_json(ev_metadata);
-            let _ = app_handle.emit("player_status", payload); */
         }
     } else {
         info!("No last_metadata to compare, setting new value");
@@ -300,9 +325,8 @@ async fn player_command<'a>(
     {
         let _update_result = {
             info!("Attempting to lock state");
-            let state_guard = state.0.lock().await;
-            info!("State locked successfully");
-            let last_metadata: &mut Option<EvMetadata> = &mut state_guard.clone();
+            let mut state_guard = state.0.lock().await;
+            let last_metadata: &mut Option<EvMetadata> = &mut *state_guard;
             let should_toggle = toggle_play_state.unwrap_or(false);
             let player_lock = player.lock().await;
             if should_toggle {
@@ -315,12 +339,13 @@ async fn player_command<'a>(
                 };
                 let toggle_play_state = metadata_check.playing;
                 info!("Updating metadata because of a command");
+                info!("Playing status is {:?}", toggle_play_state);
                 update_metadata(
                     &*player_lock,
                     &app_handle,
                     aumid,
                     last_metadata,
-                    Some(toggle_play_state),
+                    Some(!toggle_play_state),
                 )
                 .await
             } else {

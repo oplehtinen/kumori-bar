@@ -40,6 +40,8 @@ async fn main() {
     #[cfg(debug_assertions)] // only enable instrumentation in development builds
     let devtools = tauri_plugin_devtools::init();
     let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_oauth::init())
         .setup(|app| {
             let quit_p = PredefinedMenuItem::quit(app, Some("Quit"))?;
             let menu = MenuBuilder::new(app).items(&[&quit_p]).build()?;

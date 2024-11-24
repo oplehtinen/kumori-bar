@@ -1,4 +1,6 @@
 <script lang="ts">
+	import MediaControlButton from './MediaControlButton.svelte';
+
 	import { onMount } from 'svelte';
 	import { listen } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/core';
@@ -7,6 +9,8 @@
 	import NextIcon from './Icons/NextIcon.svelte';
 	import LoadingIcon from './Icons/LoadingIcon.svelte';
 	import PlayIcon from './Icons/PlayIcon.svelte';
+	import Spotify from './Spotify.svelte';
+	import { updateSignal } from '../store/update';
 	let metadata: any = $state();
 	let newMetadata: any;
 	let processing = $state(false);
@@ -34,6 +38,7 @@
 			) {
 				metadata = newMetadata;
 				processing = false;
+				updateSignal.update((n) => n + 1);
 			}
 		});
 	});
@@ -81,27 +86,20 @@
 				? ''
 				: 'hidden'} top-4 right-8 flex justify-end items-center gap-x-2 z-10"
 		>
-			<button
-				class="btn btn-square btn-outline"
-				onclick={() => controlCmd('previous', metadata.player_aumid)}
-			>
-				<PrevIcon></PrevIcon>
-			</button>
-			<button
-				class="btn btn-square btn-outline"
-				onclick={() => controlCmd('play_pause', metadata.player_aumid)}
-			>
-				{#if metadata.playing}
-					<PauseIcon></PauseIcon>
-				{:else}<PlayIcon></PlayIcon>
-				{/if}
-			</button>
-			<button
-				class="btn btn-square btn-outline"
-				onclick={() => controlCmd('next', metadata.player_aumid)}
-			>
-				<NextIcon></NextIcon>
-			</button>
+			<MediaControlButton
+				onClick={() => controlCmd('previous', metadata.player_aumid)}
+				icon={PrevIcon}
+			/>
+			<MediaControlButton
+				onClick={() => controlCmd('play_pause', metadata.player_aumid)}
+				icon={metadata.playing ? PauseIcon : PlayIcon}
+			/>
+			<MediaControlButton
+				onClick={() => controlCmd('next', metadata.player_aumid)}
+				icon={NextIcon}
+			/>
+			<div class="divider divider-horizontal"></div>
+			<Spotify></Spotify>
 		</div>
 		<div class="stat relative z-0 justify-items-end {controls ? 'blur-sm' : ''}">
 			<div class="stat-figure text-secondary">

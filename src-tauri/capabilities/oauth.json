@@ -1,0 +1,13 @@
+{
+    "identifier": "oauth",
+    "description": "oauth rules for spotify authentication",
+    "local": true,
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        "oauth:allow-start",
+        "oauth:allow-cancel",
+        "shell:allow-open"
+    ]
+}

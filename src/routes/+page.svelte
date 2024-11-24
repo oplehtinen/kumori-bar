@@ -39,10 +39,9 @@
 		</button>
 	</div>
 	<div class="basis-1/3 justify-center gap-x-2">
-		<WorkspaceWidget></WorkspaceWidget>
+		<WorkspaceWidget></WorkspaceWidget><FpsMonitor></FpsMonitor>
 	</div>
 	<div class="basis-1/3 justify-end">
-		<FpsMonitor></FpsMonitor>
 		<MediaWidget></MediaWidget>
 	</div>
 </div>

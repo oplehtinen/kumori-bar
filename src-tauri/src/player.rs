@@ -18,6 +18,7 @@ pub struct EvArtData {
     pub data: Vec<u8>,
     pub mimetype: String,
 }
+
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EvMetadata {
     pub album: Option<String>,
@@ -33,6 +34,7 @@ pub struct EvMetadata {
     pub playing: bool,
     aumid: String,
 }
+
 struct Throttle {
     last_call: Instant,
     interval: Duration,
@@ -41,12 +43,11 @@ struct Throttle {
 impl Throttle {
     fn new(interval: Duration) -> Self {
         Throttle {
-            last_call: Instant::now() - interval, // Initialize to allow immediate first call
+            last_call: Instant::now() - interval, // Initialize to allow immediate first call by ensuring the time difference check in allow_call passes
             interval,
         }
     }
-
-    async fn allow_call(&mut self) -> bool {
+    fn allow_call(&mut self) -> bool {
         let now = Instant::now();
         if now - self.last_call >= self.interval {
             self.last_call = now;
@@ -56,6 +57,7 @@ impl Throttle {
         }
     }
 }
+
 pub async fn poll_manager_and_player_concurrently<'a>(
     mut manager: ClPlayerManager,
     app_handle: &AppHandle,
@@ -75,11 +77,15 @@ pub async fn poll_manager_and_player_concurrently<'a>(
         // measure time
         let start = Instant::now();
         let should_call = {
-            let mut throttle = throttle.lock().await;
-            throttle.allow_call().await
+            let mut throttle_guard = throttle.lock().await;
+            throttle_guard.allow_call()
         };
         if !should_call {
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            let throttle_guard = throttle.lock().await;
+            let remaining_time =
+                throttle_guard.interval - (Instant::now() - throttle_guard.last_call);
+            drop(throttle_guard); // Explicitly drop the lock to avoid holding it during sleep
+            tokio::time::sleep(remaining_time).await;
             let elapsed = Instant::now() - start;
             info!("loop end !should_call, elapsed: {:?}", elapsed);
             continue;

@@ -70,14 +70,19 @@ pub async fn poll_manager_and_player_concurrently<'a>(
         state_guard.clone()
     };
     manager.update_sessions(None).await;
-    loop {
+
+    'poll: loop {
         info!("loop start");
+        // measure time
+        let start = Instant::now();
         let should_call = {
             let mut throttle = throttle.lock().await;
             throttle.allow_call().await
         };
         if !should_call {
-            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+            let elapsed = Instant::now() - start;
+            info!("loop end !should_call, elapsed: {:?}", elapsed);
             continue;
         }
         manager.update_sessions(None).await;
@@ -92,6 +97,8 @@ pub async fn poll_manager_and_player_concurrently<'a>(
             Some(player) => player,
             None => {
                 error!("Failed to find player for aumid: {}", aumid_clone);
+                let elapsed = Instant::now() - start;
+                info!("loop end no player, elapsed: {:?}", elapsed);
                 continue;
             }
         };
@@ -101,60 +108,18 @@ pub async fn poll_manager_and_player_concurrently<'a>(
 
         tokio::select! {
             manager_result = manager_poll => {
-                match manager_result.as_str() {
-                    "ActiveSessionChanged" => {
-                        info!("Active session changed");
-                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
-                        continue;
-                    }
-                    "SystemSessionChanged" => {
-                        info!("System session changed");
-                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
-                        continue;
-                    }
-                    "SessionsChanged" => {
-                        info!("Sessions changed");
-                        update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
-                        continue;
-                    }
-                    "Timeout" => {
-                        info!("Timeout");
-                    }
-                    _ => {
-                        info!("Unhandled event: {}", manager_result);
-                    }
+                if handle_manager_event(manager_result.as_str(), &mut player, app_handle, aumid_clone.clone(), &mut last_metadata).await {
+                    let elapsed = Instant::now() - start;
+                    info!("loop end manager_event, elapsed: {:?}", elapsed);
+                    continue;
                 }
             },
             player_result = player_poll => {
-
-            match player_result.as_str() {
-                "PlaybackInfoChanged" => {
-                    info!("Playback info changed");
-                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
+                if handle_player_event(player_result.as_str(), &mut player, app_handle, aumid_clone.clone(), &mut last_metadata).await {
+                    let elapsed = Instant::now() - start;
+                    info!("loop end player_event, elapsed: {:?}", elapsed);
                     continue;
                 }
-                "MediaPropertiesChanged" => {
-                    info!("Media properties changed");
-                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
-                    continue;
-                }
-                "TimelinePropertiesChanged" => {
-                    info!("Timeline properties changed");
-
-
-                    update_metadata(&player, app_handle, aumid_clone,  &mut last_metadata, None).await;
-                    continue;
-                }
-                "Timeout" => {
-                    info!("Timeout");
-                }
-                _ => {
-                    info!("Unhandled event: {}", player_result);
-                }
-            }
-
-
-            info!("loop end");
             },
         }
         info!(
@@ -164,6 +129,56 @@ pub async fn poll_manager_and_player_concurrently<'a>(
                 .map(|metadata| metadata.title.clone())
                 .unwrap_or_else(|| "None".to_string())
         );
+        let elapsed = Instant::now() - start;
+        info!("loop end, reached end, elapsed: {:?}", elapsed);
+    }
+}
+
+async fn handle_manager_event(
+    event: &str,
+    player: &mut ClPlayer,
+    app_handle: &AppHandle,
+    aumid: String,
+    last_metadata: &mut Option<EvMetadata>,
+) -> bool {
+    match event {
+        "ActiveSessionChanged" | "SystemSessionChanged" | "SessionsChanged" => {
+            info!("Manager event: {}", event);
+            update_metadata(player, app_handle, aumid, last_metadata, None).await;
+            true
+        }
+        "Timeout" => {
+            info!("Manager event: Timeout");
+            false
+        }
+        _ => {
+            info!("Unhandled manager event: {}", event);
+            false
+        }
+    }
+}
+
+async fn handle_player_event(
+    event: &str,
+    player: &mut ClPlayer,
+    app_handle: &AppHandle,
+    aumid: String,
+    last_metadata: &mut Option<EvMetadata>,
+) -> bool {
+    match event {
+        "PlaybackInfoChanged" | "MediaPropertiesChanged" | "TimelinePropertiesChanged" => {
+            info!("Player event: {}", event);
+            update_metadata(player, app_handle, aumid, last_metadata, None).await;
+            true
+        }
+        "Timeout" => {
+            info!("Player event: Timeout");
+            false
+        }
+        _ => {
+            info!("Unhandled player event: {}", event);
+            false
+        }
     }
 }
 fn metadata_to_json(metadata: EvMetadata) -> Value {

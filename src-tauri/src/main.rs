@@ -20,6 +20,7 @@ use player::{next, play_pause, poll_manager_and_player_concurrently, previous, E
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
+    utils::config::Position,
     AppHandle, Manager, PhysicalSize, State,
 };
 use tokio::sync::Mutex;
@@ -69,6 +70,7 @@ async fn main() {
                 height: 80,
             };
             let _ = window.set_size(new_size);
+            let _ = window.set_position(tauri::PhysicalPosition::new(0, 0));
             Ok(())
         })
         .manage(LastMetadata::default())
@@ -134,12 +136,22 @@ async fn get_player_status<'a>(
 }
 
 #[tauri::command]
-fn get_komorebi_status() -> String {
-    let output: Output = execute_komorebi_command("state", &[]);
-    match String::from_utf8(output.stdout) {
-        Ok(result) => result,
-        Err(e) => {
-            error!("Error converting output to string: {}", e);
+async fn get_komorebi_status() -> String {
+    let output = tokio::time::timeout(Duration::from_secs(5), async {
+        execute_komorebi_command("state", &[])
+    })
+    .await;
+
+    match output {
+        Ok(output) => match String::from_utf8(output.stdout) {
+            Ok(result) => result,
+            Err(e) => {
+                error!("Error converting output to string: {}", e);
+                String::new()
+            }
+        },
+        Err(_) => {
+            error!("Timeout while waiting for komorebi command to complete");
             String::new()
         }
     }

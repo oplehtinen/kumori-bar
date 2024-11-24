@@ -1,13 +1,9 @@
 <script lang="ts">
 	import WorkspaceWidget from './WorkspaceWidget.svelte';
 
-	import { onMount } from 'svelte';
-	import { LogicalSize, currentMonitor, getCurrentWindow, Window } from '@tauri-apps/api/window';
-	import { Webview } from '@tauri-apps/api/webview';
 	import { invoke } from '@tauri-apps/api/core';
-	import { listen } from '@tauri-apps/api/event';
 	import MediaWidget from './MediaWidget.svelte';
-	import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
+	import FpsMonitor from './FpsMonitor.svelte';
 	const barHeight = 100;
 
 	invoke('set_komorebi_offset', {
@@ -46,6 +42,7 @@
 		<WorkspaceWidget></WorkspaceWidget>
 	</div>
 	<div class="basis-1/3 justify-end">
+		<FpsMonitor></FpsMonitor>
 		<MediaWidget></MediaWidget>
 	</div>
 </div>

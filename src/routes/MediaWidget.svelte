@@ -63,6 +63,9 @@
 			.catch((err) => {
 				console.error(err);
 			});
+		setTimeout(() => {
+			processing = false;
+		}, 2000);
 	};
 	/* $: metadata, (processing = false); */
 </script>

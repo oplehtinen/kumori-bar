@@ -5,7 +5,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter};
 use tokio::sync::Mutex;
 use tokio::time::Instant;
 use windows::Media::Control::GlobalSystemMediaTransportControlsSessionPlaybackStatus;
@@ -13,7 +13,6 @@ use winplayer_lib::clplayer::ClPlayer;
 use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
 
-use crate::LastMetadata;
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub struct EvArtData {
     pub data: Vec<u8>,
@@ -71,7 +70,7 @@ pub async fn poll_manager_and_player_concurrently<'a>(
     };
     manager.update_sessions(None).await;
 
-    'poll: loop {
+    loop {
         info!("loop start");
         // measure time
         let start = Instant::now();
@@ -312,13 +311,10 @@ async fn get_player_and_manager(aumid: String) -> Result<(ClPlayer, ClPlayerMana
 }
 
 async fn player_command<'a>(
-    app_handle: AppHandle,
     aumid: String,
     command: impl FnOnce(Arc<Mutex<ClPlayer>>) -> Pin<Box<dyn Future<Output = bool> + Send + 'a>>,
-    state: State<'a, LastMetadata>,
-    toggle_play_state: Option<bool>,
 ) -> bool {
-    let (player, mut manager) = match get_player_and_manager(aumid.to_string()).await {
+    let (player, _manager) = match get_player_and_manager(aumid.to_string()).await {
         Ok((player, manager)) => (Arc::new(Mutex::new(player)), manager),
         Err(_) => return false,
     };
@@ -336,102 +332,37 @@ async fn player_command<'a>(
         error!("Failed to execute command");
         return false;
     }
-
-    {
-        let _update_result = {
-            info!("Attempting to lock state");
-            let mut state_guard = state.0.lock().await;
-            let last_metadata: &mut Option<EvMetadata> = &mut *state_guard;
-            let should_toggle = toggle_play_state.unwrap_or(false);
-            let player_lock = player.lock().await;
-            if should_toggle {
-                let metadata_check = match last_metadata {
-                    Some(metadata_check) => metadata_check,
-                    None => {
-                        error!("Error: Metadata is None");
-                        return false;
-                    }
-                };
-                let toggle_play_state = metadata_check.playing;
-                info!("Updating metadata because of a command");
-                info!("Playing status is {:?}", toggle_play_state);
-                update_metadata(
-                    &*player_lock,
-                    &app_handle,
-                    aumid,
-                    last_metadata,
-                    Some(!toggle_play_state),
-                )
-                .await
-            } else {
-                info!("Updating metadata because of a command");
-                update_metadata(&*player_lock, &app_handle, aumid, last_metadata, None).await
-            }
-            manager.update_sessions(None).await;
-        };
-    }
-
     info!("Command executed successfully");
     true
 }
 
 #[tauri::command]
-pub async fn next(
-    app_handle: AppHandle,
-    aumid: String,
-    state: State<'_, LastMetadata>,
-) -> Result<bool, ()> {
-    Ok(player_command(
-        app_handle,
-        aumid,
-        |player_arc_mutex| {
-            Box::pin(async move {
-                let player = player_arc_mutex.lock().await;
-                player.next().await
-            })
-        },
-        state,
-        Some(false),
-    )
+pub async fn next(aumid: String) -> Result<bool, ()> {
+    Ok(player_command(aumid, |player_arc_mutex| {
+        Box::pin(async move {
+            let player = player_arc_mutex.lock().await;
+            player.next().await
+        })
+    })
     .await)
 }
 #[tauri::command]
-pub async fn play_pause(
-    app_handle: AppHandle,
-    aumid: String,
-    state: State<'_, LastMetadata>,
-) -> Result<bool, ()> {
-    Ok(player_command(
-        app_handle,
-        aumid,
-        |player_arc_mutex| {
-            Box::pin(async move {
-                let player = player_arc_mutex.lock().await;
-                player.play_pause().await
-            })
-        },
-        state,
-        Some(true),
-    )
+pub async fn play_pause(aumid: String) -> Result<bool, ()> {
+    Ok(player_command(aumid, |player_arc_mutex| {
+        Box::pin(async move {
+            let player = player_arc_mutex.lock().await;
+            player.play_pause().await
+        })
+    })
     .await)
 }
 #[tauri::command]
-pub async fn previous(
-    app_handle: AppHandle,
-    aumid: String,
-    state: State<'_, LastMetadata>,
-) -> Result<bool, ()> {
-    Ok(player_command(
-        app_handle,
-        aumid,
-        |player_arc_mutex| {
-            Box::pin(async move {
-                let player = player_arc_mutex.lock().await;
-                player.previous().await
-            })
-        },
-        state,
-        Some(false),
-    )
+pub async fn previous(aumid: String) -> Result<bool, ()> {
+    Ok(player_command(aumid, |player_arc_mutex| {
+        Box::pin(async move {
+            let player = player_arc_mutex.lock().await;
+            player.previous().await
+        })
+    })
     .await)
 }

@@ -21,6 +21,7 @@ const generateSpotifyCodeChallenge = async () => {
     const codeChallenge = base64encode(hashed);
     return { codeVerifier, codeChallenge };
 }
+import type { AccessToken } from '@spotify/web-api-ts-sdk';
 import { open } from '@tauri-apps/plugin-shell';
 const getSpotifyCode = async (clientId: string) => {
     const { codeVerifier, codeChallenge } = await generateSpotifyCodeChallenge();
@@ -94,4 +95,48 @@ async function removeSavedTracks(token: string, trackIds: string[]): Promise<voi
         throw new Error('Failed to remove tracks');
     }
 }
-export { getSpotifyCode, getSpotifyToken, saveTracks, removeSavedTracks };
+type refreshReply = {
+    token: AccessToken | null,
+    success: boolean
+}
+
+async function tryRefreshToken(clientId: string, token: AccessToken): Promise<refreshReply> {
+    const url = 'https://api.spotify.com/v1/me';
+    if (!token || !token.refresh_token || !token.access_token) {
+        return { token: null, success: false };
+    }
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token.access_token}`
+        }
+    });
+    if (response.status == 200) {
+        return { token, success: true };
+    }
+    else if (response.status == 401) {
+        const url = "https://accounts.spotify.com/api/token";
+        const payload = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: token.refresh_token,
+                client_id: clientId
+            })
+        }
+        const body = await fetch(url, payload);
+        const res = await body.json();
+        const newToken = res.access_token;
+        if (body.ok) {
+            return { token: newToken, success: true };
+        }
+        else {
+            return { token: null, success: false };
+        }
+    }
+    return { token: null, success: false };
+};
+export { getSpotifyCode, getSpotifyToken, saveTracks, removeSavedTracks, tryRefreshToken };

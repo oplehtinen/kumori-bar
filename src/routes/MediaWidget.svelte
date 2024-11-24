@@ -20,13 +20,12 @@
 				console.error(err);
 			});
 		listen('player_status', (event: any) => {
-			console.log(event);
-			console.log(metadata);
 			let albumArtData = event.payload.art_data.data;
 			let mimetype = event.payload.art_data.mimetype;
 			let albumArt = new Blob([new Uint8Array(albumArtData)], { type: mimetype });
 			let url = URL.createObjectURL(albumArt);
 			newMetadata = event.payload;
+			console.log(newMetadata.title);
 			newMetadata.albumArt = url;
 			if (
 				metadata == undefined ||

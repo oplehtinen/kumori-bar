@@ -20,7 +20,6 @@ use player::{next, play_pause, poll_manager_and_player_concurrently, previous, E
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    utils::config::Position,
     AppHandle, Manager, PhysicalSize, State,
 };
 use tokio::sync::Mutex;
@@ -120,11 +119,9 @@ async fn get_player_status<'a>(
             ));
             let cl_player_manager: ClPlayerManager = ClPlayerManager::new(player_manager);
 
-            // Start the manager loop
-            // start_manager_loop(cl_player_manager, &app_handle).await;
+            info!("Starting manager loop");
             poll_manager_and_player_concurrently(cl_player_manager, &app_handle, metadata_clone)
                 .await;
-
             // After the loop completes, reset the flag
             MANAGER_LOOP_RUNNING.store(false, Ordering::SeqCst);
         });

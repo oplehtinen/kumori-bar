@@ -208,7 +208,7 @@ async fn update_metadata(
             return;
         }
     };
-    let mut ev_metadata = EvMetadata {
+    let ev_metadata = EvMetadata {
         album: metadata.album.clone(),
         album_artist: metadata.album_artist.clone(),
         album_artists: metadata.album_artists.clone(),
@@ -218,7 +218,9 @@ async fn update_metadata(
             data: art_data.data,
             mimetype: art_data.mimetype,
         }),
-        playing: false,
+        playing: toggle_play_state.unwrap_or_else(|| {
+            status.status == GlobalSystemMediaTransportControlsSessionPlaybackStatus(4)
+        }),
         player_aumid: aumid.clone(),
         id: metadata.id.clone(),
         aumid,
@@ -226,22 +228,11 @@ async fn update_metadata(
         title: metadata.title.clone(),
     };
 
-    if let Some(toggle_play_state) = toggle_play_state {
-        ev_metadata.playing = toggle_play_state
-    } else {
-        if status.status == GlobalSystemMediaTransportControlsSessionPlaybackStatus(4) {
-            ev_metadata.playing = true;
-        } else {
-            ev_metadata.playing = false;
-        }
-    }
-
     if let Some(last_metadata) = last_metadata {
         if *last_metadata != ev_metadata {
             info!("Last metadata found, metadata HAS changed");
-            let new_metadata = ev_metadata;
-            *last_metadata = new_metadata.clone();
-            let payload = metadata_to_json(new_metadata);
+            *last_metadata = ev_metadata.clone();
+            let payload = metadata_to_json(ev_metadata);
             let title = payload
                 .get("title")
                 .cloned()
@@ -250,11 +241,9 @@ async fn update_metadata(
             let _ = app_handle.emit("player_status", payload);
         } else {
             info!("Metadata has NOT changed");
-            let new_metadata = ev_metadata;
-            *last_metadata = new_metadata.clone();
-            let payload = metadata_to_json(new_metadata);
-            let cur_postion = player.get_position(true).await;
-            if let Some(position) = cur_postion {
+            *last_metadata = ev_metadata.clone();
+            let payload = metadata_to_json(ev_metadata);
+            if let Some(position) = player.get_position(true).await {
                 let seek_percentage = position.how_much / last_metadata.length;
                 info!("Seek percentage: {}", seek_percentage);
                 if seek_percentage < 0.01 {
@@ -265,11 +254,9 @@ async fn update_metadata(
         }
     } else {
         info!("No last_metadata to compare, setting new value");
-        let new_metadata = ev_metadata;
-        *last_metadata = Some(new_metadata.clone());
-        let payload = metadata_to_json(new_metadata);
-        let cur_postion = player.get_position(true).await;
-        if let Some(position) = cur_postion {
+        *last_metadata = Some(ev_metadata.clone());
+        let payload = metadata_to_json(ev_metadata);
+        if let Some(position) = player.get_position(true).await {
             if let Some(last_metadata) = last_metadata.as_ref() {
                 let seek_percentage = position.how_much / last_metadata.length;
                 info!("Seek percentage: {}", seek_percentage);
@@ -282,7 +269,6 @@ async fn update_metadata(
                 error!("Error: last_metadata is None");
             }
         }
-
         let _ = app_handle.emit("player_status", payload);
     }
 

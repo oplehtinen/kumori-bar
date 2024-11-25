@@ -39,4 +39,7 @@ features = [
     "Win32_System_IO",
     "Win32_Storage_FileSystem",
     "Win32_Security",
+    "Win32_UI",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
 ]

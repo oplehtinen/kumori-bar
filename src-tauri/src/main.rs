@@ -15,6 +15,7 @@ pub mod flags;
 mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
+use appbar::make_window_appbar;
 use constants::KOMOREBI_CLI_EXE;
 use log::{error, info};
 use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
@@ -45,7 +46,7 @@ async fn main() {
         .plugin(tauri_plugin_oauth::init())
         .setup(|app| {
             add_tray(&app.handle());
-
+            setup_window(&app.handle());
             Ok(())
         })
         .manage(LastMetadata::default())
@@ -53,7 +54,6 @@ async fn main() {
             get_komorebi_status,
             switch_to_workspace,
             komorebi_init_event_listener,
-            set_komorebi_offset,
             get_player_status,
             next,
             play_pause,
@@ -187,10 +187,12 @@ fn setup_window(app: &AppHandle) {
     let monitor = app.primary_monitor().unwrap().unwrap();
     let size = monitor.size();
     let monitor_width = size.width;
+    let window_copy = window.clone();
+    make_window_appbar(window, monitor_width.try_into().unwrap(), 80).unwrap();
     let new_size = PhysicalSize {
         width: monitor_width,
         height: 80,
     };
-    let _ = window.set_size(new_size);
-    let _ = window.set_position(tauri::PhysicalPosition::new(0, 0));
+    let _ = window_copy.set_size(new_size);
+    let _ = window_copy.set_position(tauri::PhysicalPosition::new(0, 0));
 }

@@ -80,7 +80,7 @@
         "y": 0,
         "decorations": false,
         "shadow": false,
-        "alwaysOnTop": true,
+        "alwaysOnTop": false,
         "skipTaskbar": true,
         "transparent": true,
         "useHttpsScheme": false

@@ -1,6 +1,5 @@
 <script lang="ts">
-	import MediaControlButton from './MediaControlButton.svelte';
-
+	import MediaControlButton from './ClickButton.svelte';
 	import { onMount } from 'svelte';
 	import { listen } from '@tauri-apps/api/event';
 	import { invoke } from '@tauri-apps/api/core';

@@ -14,17 +14,12 @@
 			status = JSON.parse(res as string);
 			if (!status) return;
 			monitors = status.monitors.elements;
-			console.log(monitors);
-			// for each monitor, create a workspace
 			monitors.forEach((monitor) => {
-				console.log(monitor);
 				workspaces.push(...monitor.workspaces.elements);
 			});
-			console.log(workspaces);
 		});
 		invoke('komorebi_init_event_listener')
 			.then((res) => {
-				console.log(res);
 				console.log('Komorebi event listener initialized');
 			})
 			.catch((err) => {
@@ -32,10 +27,8 @@
 			});
 
 		listen('komorebi_status', (event: any) => {
-			console.log(event);
 			status = (event.payload.state as KomorebiStatus) || {};
 			monitors = status.monitors?.elements || [];
-			console.log(monitors);
 		});
 	});
 	const openWorkspace = (monitor: number, workspace: number) => {
@@ -65,7 +58,7 @@
 			{#if workspace}
 				<button
 					class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-success' : ''}`}
-					onclickcapture={trusted(stopPropagation(preventDefault(() => openWorkspace(mIdx, wIdx))))}
+					onclick={trusted(stopPropagation(preventDefault(() => openWorkspace(mIdx, wIdx))))}
 					>{workspace.name ?? (wIdx + 1).toString()}</button
 				>
 			{/if}

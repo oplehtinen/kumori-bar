@@ -10,7 +10,7 @@
 	} from '@fabianlars/tauri-plugin-oauth';
 	import { getSpotifyCode, getSpotifyToken, tryRefreshToken } from '$lib';
 	import { updateSignal } from '../store/update';
-	import MediaControlButton from './MediaControlButton.svelte';
+	import MediaControlButton from './ClickButton.svelte';
 	import LikeIcon from './Icons/LikeIcon.svelte';
 	import NotLikeIcon from './Icons/NotLikeIcon.svelte';
 	import { saveTracks, removeSavedTracks } from '$lib';

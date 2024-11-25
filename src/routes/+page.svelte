@@ -1,16 +1,10 @@
 <script lang="ts">
 	import WorkspaceWidget from './WorkspaceWidget.svelte';
-
 	import { invoke } from '@tauri-apps/api/core';
 	import MediaWidget from './MediaWidget.svelte';
 	import FpsMonitor from './FpsMonitor.svelte';
-	const barHeight = 100;
-
-	invoke('set_komorebi_offset', {
-		offset: (barHeight / 2 - 10).toString()
-	}).then((res) => {
-		console.log(res);
-	});
+	import { onMount } from 'svelte';
+	onMount(async () => {});
 	const winTabPress = () => {
 		invoke('simulate_windows_tab');
 	};

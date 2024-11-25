@@ -15,12 +15,14 @@
 	import NotLikeIcon from './Icons/NotLikeIcon.svelte';
 	import { saveTracks, removeSavedTracks } from '$lib';
 	import { PUBLIC_SPOTIFY_CLIENT_ID } from '$env/static/public';
+	import { load, Store } from '@tauri-apps/plugin-store';
 	const clientId = PUBLIC_SPOTIFY_CLIENT_ID;
 	let sdk: SpotifyApi;
 	let token: AccessToken;
 	let nowPlaying: string;
 	let isSaved: boolean;
-	async function startOAuthFlow() {
+	let store: Store;
+	async function startOAuthFlow(store: Store) {
 		try {
 			const config: OauthConfig = {
 				ports: [8889],
@@ -37,9 +39,9 @@
 					console.error('No code found in URL:', url);
 					return;
 				}
-				token = await getSpotifyToken(clientId, code, challenge);
-				console.log('access token from oauth:' + token);
-				sdk = SpotifyApi.withAccessToken(clientId, token);
+				const oauthToken = await getSpotifyToken(clientId, code, challenge);
+				console.log('validating token..');
+				tryInitSdk(clientId, oauthToken, store);
 				const state = await sdk.player.getCurrentlyPlayingTrack();
 				nowPlaying = state?.item?.id ?? null;
 				stopOAuthServer();
@@ -59,8 +61,41 @@
 			console.error('Error stopping OAuth server:', error);
 		}
 	}
+	async function tryInitSdk(clientId: string, currentToken: AccessToken, store: Store) {
+		if (currentToken) {
+			tryInitToken(clientId, currentToken, store);
+		}
+		if (sdk) {
+			const state = await sdk.player.getCurrentlyPlayingTrack();
+			nowPlaying = state?.item?.id ?? null;
+			console.log(state);
+			const hasSaved = await sdk.currentUser.tracks.hasSavedTracks([nowPlaying]);
+			isSaved = hasSaved[0];
+		}
+	}
+	async function tryInitToken(clientId: string, currentToken: AccessToken, store: Store) {
+		const refreshData = await tryRefreshToken(clientId, currentToken);
+		if (!refreshData.success) {
+			console.error('Token refresh failed, going through OAuth flow');
+			await startOAuthFlow(store);
+		} else if (refreshData.token) {
+			token = refreshData.token;
+			console.log('token ok');
+			console.log(token);
+			store.set('token', token);
+			sdk = SpotifyApi.withAccessToken(clientId, token);
+		}
+	}
 	onMount(async () => {
-		startOAuthFlow();
+		store = await load('spotify.json', { autoSave: true });
+		const storeToken = await store.get<AccessToken>('token');
+		if (storeToken) {
+			console.log('token found from store, validating');
+			tryInitSdk(clientId, storeToken, store);
+		} else {
+			console.log('no token stored, go to oauth flow');
+			startOAuthFlow(store);
+		}
 	});
 	const likeSong = async () => {
 		if (!sdk) {
@@ -72,6 +107,7 @@
 			return;
 		}
 		if (sdk && nowPlaying) {
+			console.log(token);
 			if (isSaved) {
 				await removeSavedTracks(token.access_token, [nowPlaying]);
 			} else {
@@ -81,23 +117,7 @@
 		}
 	};
 	updateSignal.subscribe(async () => {
-		if (token) {
-			const refreshData = await tryRefreshToken(clientId, token);
-			if (!refreshData.success) {
-				console.error('Token refresh failed, going through OAuth flow');
-				await startOAuthFlow();
-			} else if (refreshData.token) {
-				token = refreshData.token;
-				sdk = SpotifyApi.withAccessToken(clientId, token);
-			}
-		}
-		if (sdk) {
-			const state = await sdk.player.getCurrentlyPlayingTrack();
-			nowPlaying = state?.item?.id ?? null;
-			console.log(state);
-			const hasSaved = await sdk.currentUser.tracks.hasSavedTracks([nowPlaying]);
-			isSaved = hasSaved[0];
-		}
+		tryInitSdk(clientId, token, store);
 	});
 </script>
 

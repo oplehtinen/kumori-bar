@@ -128,8 +128,7 @@ async function tryRefreshToken(clientId: string, token: AccessToken): Promise<re
             })
         }
         const body = await fetch(url, payload);
-        const res = await body.json();
-        const newToken = res.access_token;
+        const newToken = await body.json();
         if (body.ok) {
             return { token: newToken, success: true };
         }

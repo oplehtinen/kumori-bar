@@ -9,6 +9,7 @@ use std::{
         Arc,
     },
 };
+mod appbar;
 pub mod constants;
 pub mod flags;
 mod listener;
@@ -43,35 +44,8 @@ async fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_oauth::init())
         .setup(|app| {
-            let quit_p = PredefinedMenuItem::quit(app, Some("Quit"))?;
-            let menu = MenuBuilder::new(app).items(&[&quit_p]).build()?;
+            add_tray(&app.handle());
 
-            let _tray = TrayIconBuilder::new()
-                .menu(&menu)
-                .on_menu_event(move |_app, event| match event.id().as_ref() {
-                    "quit" => {
-                        info!("unhandled event {event:?}");
-                    }
-                    _ => {}
-                })
-                .icon(app.default_window_icon().unwrap().clone())
-                .build(app)?;
-
-            let Some(window) = app.get_webview_window("main") else {
-                return Ok(());
-            };
-            // let monitors = app.available_monitors();
-            let Ok(Some(monitor)) = app.primary_monitor() else {
-                return Ok(());
-            };
-            let size = monitor.size();
-            let monitor_width = size.width;
-            let new_size = PhysicalSize {
-                width: monitor_width,
-                height: 80,
-            };
-            let _ = window.set_size(new_size);
-            let _ = window.set_position(tauri::PhysicalPosition::new(0, 0));
             Ok(())
         })
         .manage(LastMetadata::default())
@@ -191,4 +165,32 @@ async fn simulate_windows_tab() {
     sleep(Duration::from_millis(100)).await;
     enigo.key(Key::Meta, Release).unwrap();
     enigo.key(Key::Tab, Release).unwrap();
+}
+fn add_tray(app: &AppHandle) {
+    let quit_p = PredefinedMenuItem::quit(app, Some("Quit")).unwrap();
+    let menu = MenuBuilder::new(app).items(&[&quit_p]).build().unwrap();
+    TrayIconBuilder::new()
+        .menu(&menu)
+        .on_menu_event(move |_app, event| match event.id().as_ref() {
+            "quit" => {
+                info!("unhandled event {event:?}");
+            }
+            _ => {}
+        })
+        .icon(app.default_window_icon().unwrap().clone())
+        .build(app)
+        .unwrap();
+}
+fn setup_window(app: &AppHandle) {
+    let window = app.get_webview_window("main").unwrap();
+    // let monitors = app.available_monitors();
+    let monitor = app.primary_monitor().unwrap().unwrap();
+    let size = monitor.size();
+    let monitor_width = size.width;
+    let new_size = PhysicalSize {
+        width: monitor_width,
+        height: 80,
+    };
+    let _ = window.set_size(new_size);
+    let _ = window.set_position(tauri::PhysicalPosition::new(0, 0));
 }

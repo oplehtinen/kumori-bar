@@ -1,11 +1,10 @@
 use std::mem;
-
-use tauri::{AppHandle, Error, Manager, Webview, WebviewWindow, Window};
+use tauri::{Error, WebviewWindow};
 use windows::Win32::Foundation::{HWND, LPARAM};
 use windows::Win32::UI::Shell::{
-    SHAppBarMessage, ABE_TOP, ABM_NEW, ABM_REMOVE, ABM_SETPOS, ABS_ALWAYSONTOP, APPBARDATA,
+    SHAppBarMessage, ABE_TOP, ABM_NEW, ABM_REMOVE, ABM_SETPOS, APPBARDATA,
 };
-use windows::Win32::UI::WindowsAndMessaging::{GetWindowRect, WM_USER};
+use windows::Win32::UI::WindowsAndMessaging::WM_USER;
 
 pub fn make_window_appbar(webview: WebviewWindow, width: i32, height: i32) -> Result<(), Error> {
     let hwnd = get_appbar_hwnd(webview)?;

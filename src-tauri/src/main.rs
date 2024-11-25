@@ -15,14 +15,14 @@ pub mod flags;
 mod listener;
 mod player;
 use crate::listener::komorebi_init_event_listener;
-use appbar::make_window_appbar;
+use appbar::{destroy_appbar, make_window_appbar};
 use constants::KOMOREBI_CLI_EXE;
 use log::{error, info};
 use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, PhysicalSize, State,
+    AppHandle, Listener, Manager, PhysicalSize, RunEvent, State,
 };
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
@@ -36,7 +36,6 @@ use winplayer_lib::clplayermanager::ClPlayerManager;
 use winplayer_lib::playermanager::PlayerManager;
 #[derive(Default)]
 struct LastMetadata(Arc<Mutex<Option<EvMetadata>>>);
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     #[cfg(debug_assertions)] // only enable instrumentation in development builds
@@ -44,9 +43,10 @@ async fn main() {
     let mut builder = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_oauth::init())
-        .setup(|app| {
+        .setup(move |app| {
             add_tray(&app.handle());
             setup_window(&app.handle());
+            // match multiple events
             Ok(())
         })
         .manage(LastMetadata::default())
@@ -66,8 +66,26 @@ async fn main() {
     }
 
     builder
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while running tauri application")
+        .run(move |_app, _event| {
+            match &_event {
+                RunEvent::ExitRequested { api, code, .. } => {
+                    // Keep the event loop running even if all windows are closed
+                    // This allow us to catch tray icon events when there is no window
+                    // if we manually requested an exit (code is Some(_)) we will let it go through
+
+                    api.prevent_exit();
+                    let window = _app.get_webview_window("main").unwrap();
+                    destroy_appbar(window).unwrap();
+                    _app.exit(0);
+                }
+                RunEvent::Exit {} => {
+                    info!("Closed Kumori successfully");
+                }
+                _ => (),
+            }
+        });
 }
 
 #[tauri::command]

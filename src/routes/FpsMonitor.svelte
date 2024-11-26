@@ -20,7 +20,7 @@
 	});
 </script>
 
-<div class="fps-display">
+<div class="fps-display w-64">
 	<p>FPS: {$fps}</p>
 </div>
 

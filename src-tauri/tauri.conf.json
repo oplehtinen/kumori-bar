@@ -87,7 +87,7 @@
       },
       {
         "label": "kumori-settings",
-        "decorations": false,
+        "decorations": true,
         "title": "Kumori Settings",
         "closable": false,
         "visible": false,

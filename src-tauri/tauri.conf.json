@@ -84,6 +84,14 @@
         "skipTaskbar": true,
         "transparent": true,
         "useHttpsScheme": false
+      },
+      {
+        "label": "kumori-settings",
+        "decorations": false,
+        "title": "Kumori Settings",
+        "closable": false,
+        "visible": false,
+        "url": "/settings"
       }
     ]
   }

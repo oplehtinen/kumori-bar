@@ -3,7 +3,8 @@
   "description": "permissions that were migrated from v1",
   "local": true,
   "windows": [
-    "main"
+    "main",
+    "kumori-settings"
   ],
   "permissions": [
     "core:default",
@@ -37,6 +38,8 @@
     "core:window:allow-set-cursor-visible",
     "core:window:allow-set-cursor-icon",
     "core:window:allow-set-cursor-position",
-    "core:window:allow-set-ignore-cursor-events"
+    "core:window:allow-set-ignore-cursor-events",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-create-webview-window"
   ]
 }

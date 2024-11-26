@@ -3,7 +3,8 @@
     "description": "oauth rules for spotify authentication",
     "local": true,
     "windows": [
-        "main"
+        "main",
+        "kumori-settings"
     ],
     "permissions": [
         "oauth:allow-start",

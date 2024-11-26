@@ -4,6 +4,7 @@
 	import MediaWidget from './MediaWidget.svelte';
 	import FpsMonitor from './FpsMonitor.svelte';
 	import { onMount } from 'svelte';
+	import SettingsWidget from './SettingsWidget.svelte';
 	onMount(async () => {});
 </script>
 
@@ -20,3 +21,4 @@
 		<MediaWidget></MediaWidget>
 	</div>
 </div>
+<SettingsWidget></SettingsWidget>

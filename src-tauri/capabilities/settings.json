@@ -1,0 +1,11 @@
+{
+    "identifier": "settings",
+    "description": "permissions for the settings view",
+    "local": true,
+    "windows": [
+        "kumori-settings"
+    ],
+    "permissions": [
+        "core:default"
+    ]
+}

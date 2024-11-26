@@ -14,11 +14,13 @@ pub mod constants;
 pub mod flags;
 mod listener;
 mod player;
+mod settings;
 use crate::listener::komorebi_init_event_listener;
 use appbar::{destroy_appbar, make_window_appbar};
 use constants::KOMOREBI_CLI_EXE;
 use log::{error, info};
 use player::{next, play_pause, poll_manager_and_player_concurrently, previous, EvMetadata};
+use settings::open_settings_window;
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
@@ -47,7 +49,12 @@ async fn main() {
         .setup(move |app| {
             add_tray(&app.handle());
             setup_window(&app.handle());
-            // match multiple events
+            /*      let webview_window = tauri::WebviewWindowBuilder::new(
+                app,
+                "label",
+                tauri::WebviewUrl::App("index.html".into()),
+            )
+            .build()?; */
             Ok(())
         })
         .manage(LastMetadata::default())
@@ -59,7 +66,8 @@ async fn main() {
             next,
             play_pause,
             previous,
-            simulate_windows_tab
+            simulate_windows_tab,
+            open_settings_window
         ]);
     #[cfg(debug_assertions)]
     {

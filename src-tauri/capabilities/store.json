@@ -3,7 +3,8 @@
     "description": "store rules for settings storage",
     "local": true,
     "windows": [
-        "main"
+        "main",
+        "kumori-settings"
     ],
     "permissions": [
         "store:default"

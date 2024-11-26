@@ -8,9 +8,7 @@
 	onMount(async () => {});
 </script>
 
-<div
-	class="navbar flex-grow-0 align-middle justify-between my-2 overflow-hidden text-white bg-transparent max-h-2 h-full}"
->
+<div class="navbar my-0 p-0 flex-grow-0 align-middle justify-between overflow-hidden h-20 }">
 	<div class="basis-1/3">
 		<WinTabWidget></WinTabWidget>
 	</div>

@@ -5,8 +5,8 @@
 	let { children } = $props();
 	import { clientThemeStore as activeTheme } from '../store/theme';
 	import { get } from 'svelte/store';
-	import { emit, listen } from '@tauri-apps/api/event';
-	let unlisten;
+	import { emit, listen, type UnlistenFn } from '@tauri-apps/api/event';
+	let unlisten: UnlistenFn;
 	activeTheme.subscribe((theme) => {
 		console.log('subscribe:' + theme);
 	});

@@ -7,4 +7,4 @@
 	};
 </script>
 
-<ClickButton onClick={() => winTabPress()} icon={MetaIcon}></ClickButton>
+<ClickButton onClick={() => winTabPress()} icon={MetaIcon} color="primary"></ClickButton>

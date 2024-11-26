@@ -57,7 +57,7 @@
 		{#each monitor.workspaces.elements as workspace, wIdx}
 			{#if workspace}
 				<button
-					class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-success' : ''}`}
+					class={`btn btm-sm  ${monitor.workspaces.focused === wIdx ? 'btn-secondary' : 'btn-primary-content'}`}
 					onclick={trusted(stopPropagation(preventDefault(() => openWorkspace(mIdx, wIdx))))}
 					>{workspace.name ?? (wIdx + 1).toString()}</button
 				>

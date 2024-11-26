@@ -4,6 +4,7 @@
 	import { getCurrentWindow } from '@tauri-apps/api/window';
 	import type { UnlistenFn } from '@tauri-apps/api/event';
 	import ThemeController from './ThemeController.svelte';
+	import SettingsMenuItem from './SettingsMenuItem.svelte';
 	let unlisten: UnlistenFn;
 	let store: Store;
 	onMount(async () => {
@@ -18,8 +19,15 @@
 	});
 </script>
 
-<div class="card bg-primary text-primary-content w-full h-full">
+<div class="card bg-neutral/20 text-primary w-full h-full">
 	<div class="card-body">
-		<ThemeController {store}></ThemeController>
+		{#if store}
+			<SettingsMenuItem
+				title="Theme Settings"
+				component={ThemeController}
+				{store}
+				componentProps={{}}
+			/>
+		{/if}
 	</div>
 </div>

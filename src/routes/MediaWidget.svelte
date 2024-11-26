@@ -13,6 +13,7 @@
 	let metadata: any = $state();
 	let newMetadata: any;
 	let processing = $state(false);
+	let buttonColor = '	primary';
 	onMount(async () => {
 		invoke('get_player_status')
 			.then((res) => {
@@ -88,17 +89,20 @@
 			<MediaControlButton
 				onClick={() => controlCmd('previous', metadata.player_aumid)}
 				icon={PrevIcon}
+				color={buttonColor}
 			/>
 			<MediaControlButton
 				onClick={() => controlCmd('play_pause', metadata.player_aumid)}
 				icon={metadata.playing ? PauseIcon : PlayIcon}
+				color={buttonColor}
 			/>
 			<MediaControlButton
 				onClick={() => controlCmd('next', metadata.player_aumid)}
 				icon={NextIcon}
+				color={buttonColor}
 			/>
 			<div class="divider divider-horizontal"></div>
-			<Spotify></Spotify>
+			<!-- <Spotify></Spotify> -->
 		</div>
 		<div class="stat relative z-0 justify-items-end {controls ? 'blur-sm' : ''}">
 			<div class="stat-figure text-secondary">
@@ -119,7 +123,7 @@
 				{:else}
 					{metadata.artist} - {metadata.title}{/if}
 			</div>
-			<div class="stat-title">
+			<div class="stat-title text-white">
 				{#if processing}
 					<LoadingIcon />
 				{:else}

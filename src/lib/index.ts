@@ -138,4 +138,5 @@ async function tryRefreshToken(clientId: string, token: AccessToken): Promise<re
     }
     return { token: null, success: false };
 };
+
 export { getSpotifyCode, getSpotifyToken, saveTracks, removeSavedTracks, tryRefreshToken };

@@ -122,6 +122,7 @@
 </script>
 
 {#if sdk}
+	<div class="divider divider-horizontal"></div>
 	<MediaControlButton
 		icon={isSaved ? LikeIcon : NotLikeIcon}
 		color="success"

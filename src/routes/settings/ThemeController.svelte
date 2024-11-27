@@ -1,26 +1,23 @@
 <script lang="ts">
-	import { Store } from '@tauri-apps/plugin-store';
 	import { onMount } from 'svelte';
-	type Theme = string;
-	export let store: Store;
-	import { clientThemeStore as activeTheme } from '../../store/theme';
 	import { emit } from '@tauri-apps/api/event';
+	import type { SettingsManager } from '$lib/settings';
 	import ThemePreview from './ThemePreview.svelte';
-	onMount(async () => {
-		if (store) {
-			const storeTheme = await store.get<Theme>('activeTheme');
-			if (storeTheme) {
-				activeTheme.update((n) => (n = storeTheme));
-			} else {
-				try {
-					await store.set('activeTheme', activeTheme);
-				} catch {
-					console.error('Cant change theme!');
-				}
-			}
-		}
-	});
-	const themes: Theme[] = [
+
+	interface Props {
+		settingsManager: SettingsManager;
+	}
+
+	let { settingsManager }: Props = $props();
+	let activeTheme = settingsManager.get('appearance', 'activeTheme');
+
+	async function updateTheme(theme: string) {
+		await settingsManager.set('appearance', 'activeTheme', theme);
+		activeTheme = theme;
+		await emit('theme-changed', theme);
+	}
+
+	const themes = [
 		'light',
 		'dark',
 		'cupcake',
@@ -45,28 +42,12 @@
 		'cmyk',
 		'autumn',
 		'business',
-		'acid',
-		'lemonade',
-		'night',
-		'coffee',
-		'winter',
-		'dim',
-		'nord',
-		'sunset'
-	];
-	const setActiveTheme = async (theme: Theme) => {
-		console.log('changing theme to:' + theme);
-		activeTheme.update((n) => (n = theme));
-		await store.set('activeTheme', theme);
-		await emit('theme-changed', theme);
-	};
+		'acid'
+	] as const;
 </script>
 
-<div
-	class="rounded-box grid grid-cols-2 gap-2 p-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 bg-neutral"
->
+<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
 	{#each themes as theme}
-		<ThemePreview onClick={() => setActiveTheme(theme)} {theme} activeTheme={$activeTheme}
-		></ThemePreview>
+		<ThemePreview {theme} {activeTheme} onClick={() => updateTheme(theme)} />
 	{/each}
 </div>

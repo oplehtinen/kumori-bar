@@ -12,7 +12,6 @@
 		"moduleResolution": "bundler",
 		"typeRoots": [
 			"./node_modules/@types",
-			"./tailwindcss.d.ts"
 		]
 	}
 	// Path aliases are handled by https://kit.svelte.dev/docs/configuration#alias

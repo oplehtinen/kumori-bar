@@ -101,7 +101,7 @@
 				icon={NextIcon}
 				color={buttonColor}
 			/>
-			<div class="divider divider-horizontal"></div>
+
 			<!-- <Spotify></Spotify> -->
 		</div>
 		<div class="stat relative z-0 justify-items-end {controls ? 'blur-sm' : ''}">

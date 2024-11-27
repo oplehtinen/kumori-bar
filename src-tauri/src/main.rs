@@ -24,7 +24,7 @@ use settings::open_settings_window;
 use tauri::{
     menu::{MenuBuilder, PredefinedMenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Listener, Manager, PhysicalSize, RunEvent, State,
+    AppHandle, Manager, PhysicalSize, RunEvent, State,
 };
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
@@ -79,7 +79,7 @@ async fn main() {
         .expect("error while running tauri application")
         .run(move |_app, _event| {
             match &_event {
-                RunEvent::ExitRequested { api, code, .. } => {
+                RunEvent::ExitRequested { api, .. } => {
                     // Keep the event loop running even if all windows are closed
                     // This allow us to catch tray icon events when there is no window
                     // if we manually requested an exit (code is Some(_)) we will let it go through

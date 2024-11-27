@@ -87,10 +87,11 @@
       },
       {
         "label": "kumori-settings",
-        "decorations": true,
+        "decorations": false,
         "title": "Kumori Settings",
         "closable": false,
         "visible": false,
+        "transparent": true,
         "url": "/settings"
       }
     ]

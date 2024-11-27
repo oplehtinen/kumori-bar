@@ -25,12 +25,9 @@
 <div class="bg-primary-content/95 text-primary w-full h-svh overflow-hidden">
 	<SettingsBar {currentWindow}></SettingsBar>
 	<div class="card-body h-2/3 text-primary">
-		<div
-			class="collapse overflow-auto bg-primary-content/35 collapse-arrow p-4 border-2 border-primary/40"
-		>
-			{#if store}
+		{#if store}<div class="join join-vertical w-full">
 				<SettingsMenuItem title="Themes" component={ThemeController} {store} componentProps={{}} />
-			{/if}
-		</div>
+			</div>
+		{/if}
 	</div>
 </div>
